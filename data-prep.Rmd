@@ -21,14 +21,28 @@ output:
 # Set up
 
 ```{r, libraries}
-# Set up any libraries you need
+#install packages if it errors on the concensus data and postal code data
+#install.packages("sf")
+#install.packages("cancensus")
+#install.packages("haven")
 
+# Set up any libraries you need
+library(tidyverse)
+library(polite)
+library(rvest)
+library(janitor)
+library(cancensus)
+library(haven)
 ```
 
 # Loading client data
 
 ```{r}
-
+#loading raw rds files into environment
+customer <- readRDS("data-raw/customer.Rds")
+device <- readRDS("data-raw/device.Rds")
+cust_dev <- readRDS("data-raw/cust_dev.Rds")
+cust_sleep <- readRDS("data-raw/cust_sleep.Rds")
 ```
 
 # Getting external data
@@ -36,12 +50,123 @@ output:
 ## Web scraping industry data
 
 ```{r}
+#declaring the url
+url <- "https://fitnesstrackerinfohub.netlify.app/"
 
+#creating target, providing proper user agent
+target <- bow(url,
+              user_agent = "pablo.mercado@mail.utoronto.ca for STA303/1002 project",
+              force = TRUE)
+
+#scraping
+html <- scrape(target)
+
+#creating data set from web scrapping
+device_data <- html %>% 
+  html_elements("table") %>% 
+  html_table() %>% 
+  pluck(1)
 ```
 
 # Census API
+```{r}
+options(cancensus.api_key = "CensusMapper_097b519443c084075f1669e5a98ed736",
+        cancensus.cache_path = "cache") # this sets a folder for your cache
+
+
+# get all regions as at the 2016 Census (2020 not up yet)
+regions <- list_census_regions(dataset = "CA16")
+
+regions_filtered <-  regions %>% 
+  filter(level == "CSD") %>% # Figure out what CSD means in Census data
+  as_census_region_list()
+
+# This can take a while
+# We want to get household median income
+census_data_csd <- get_census(dataset='CA16', regions = regions_filtered,
+                          vectors=c("v_CA16_2397"), 
+                          level='CSD', geo_format = "sf")
+
+# Simplify to only needed variables
+median_income <- census_data_csd %>% 
+  as_tibble() %>% 
+  select(CSDuid = GeoUID, contains("median"), Population) %>% 
+  mutate(CSDuid = parse_number(CSDuid)) %>% 
+  rename(hhld_median_inc = 2)
+```
+# Postal Code data
+```{r}
+#reading .sav file for postcode data
+dataset = read_sav("data-raw/pccfNat_fccpNat_082021sav.sav")
+
+#creating data frame and selecting only relevent variables
+postcode <- dataset %>%
+  select(PC, CSDuid)
+```
+
+
+## Cleaning the data
+# joining the data WIP
+```{r}
+#creating a new data set joining all customer data by "cust_id"
+cust_full = customer %>%
+  left_join(cust_dev, cust_sleep, by = cust_id)
+
+#creating a data set joining device data by "device_name"
+device_full = device_data %>% 
+  rename("device_name" = "Device name") %>%
+  left_right(device) %>%
+  clean_names()
+```
+
+# cleaning the data
+```{r}
+
+
+
+
+
+
+
+
+
+```
+
+
+#exporting clean data to folder
 
 ```{r}
 
+
+
+
+
+
+
+
+
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
