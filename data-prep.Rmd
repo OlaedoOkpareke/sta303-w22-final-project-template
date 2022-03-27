@@ -110,21 +110,31 @@ postcode <- dataset %>%
 ```{r}
 #creating a new data set joining all customer data by "cust_id"
 cust_full = customer %>%
-  left_join(cust_dev, cust_sleep, by = cust_id)
+  left_join(cust_dev, cust_sleep, by = "cust_id")
 
 #creating a data set joining device data by "device_name"
 device_full = device_data %>% 
   rename("device_name" = "Device name") %>%
-  left_right(device) %>%
+  right_join(device) %>%
   clean_names()
+
+geo_data = postcode %>%
+  left_join(median_income) %>%
+  rename("postcode"  = "PC")
+
+data_full = cust_full %>%
+  left_join(device_full) %>%
+  left_join(geo_data) %>%
+  distinct(cust_id, .keep_all = TRUE)
+
+marketing_data = data_full %>%
+  select(-dev_id, -device_name,-line_2,-released_2)
+
+#socialmedia_data = 
 ```
 
 # cleaning the data
 ```{r}
-
-
-
-
 
 
 
