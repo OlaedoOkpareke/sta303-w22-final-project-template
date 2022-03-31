@@ -33,6 +33,7 @@ library(rvest)
 library(janitor)
 library(cancensus)
 library(haven)
+library(eeptools)
 ```
 
 # Loading client data
@@ -128,7 +129,7 @@ data_full = cust_full %>%
   distinct(cust_id, .keep_all = TRUE)
 
 marketing_data = data_full %>%
-  select(-dev_id, -device_name,-line_2,-released_2)
+  select(-dev_id,-line_2,-released_2)
 
 #socialmedia_data = 
 ```
@@ -136,8 +137,32 @@ marketing_data = data_full %>%
 # cleaning the data
 ```{r}
 
+marketing_data = marketing_data %>%
+  drop_na(sex,pronouns)
+  
+marketing_data$emoji_modifier = recode(marketing_data$emoji_modifier, 
+                                       `U+1F3FB` = "light skin tone",
+                                       `U+1F3FC` = "medium-light skin tone",
+                                       `U+1F3FD` = "medium skin tone",
+                                       `U+1F3FE` = "medium-dark skin tone",
+                                       `U+1F3FF` = "dark skin tone")
 
+marketing_data$emoji_modifier = marketing_data$emoji_modifier %>%
+  replace_na("default skin tone")
 
+marketing_data$emoji_modifier = factor(marketing_data$emoji_modifier, levels = c("default skin tone",
+                                                                                 "light skin tone",
+                                                                                 "medium-light skin tone",
+                                                                                 "medium skin tone",
+                                                                                 "medium-dark skin tone",
+                                                                                 "dark skin tone"))
+
+marketing_data = marketing_data %>%
+  mutate(affordable = ifelse(line == "Advance" | line == "Active", TRUE, FALSE),
+         age = floor(age_calc(dob, units = "years")),
+         income_class = ifelse(hhld_median_inc <= 65327, "lower class",
+                        ifelse(65327 < hhld_median_inc & hhld_median_inc <= 85981, "middle class", 
+                        ifelse(hhld_median_inc > 85981, "upper class"))))
 
 
 ```
@@ -147,10 +172,7 @@ marketing_data = data_full %>%
 
 ```{r}
 
-
-
-
-
+write.csv(marketing_data, "data/marketing_data")
 
 
 
