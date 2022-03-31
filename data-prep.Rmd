@@ -23,8 +23,9 @@ output:
 ```{r, libraries}
 #install packages if it errors on the concensus data and postal code data
 #install.packages("sf")
-#install.packages("cancensus")
-#install.packages("haven")
+install.packages("cancensus")
+install.packages("haven")
+install.packages("eeptools")
 
 # Set up any libraries you need
 library(tidyverse)
@@ -33,6 +34,7 @@ library(rvest)
 library(janitor)
 library(cancensus)
 library(haven)
+library(eeptools)
 ```
 
 # Loading client data
@@ -81,7 +83,6 @@ regions_filtered <-  regions %>%
   filter(level == "CSD") %>% # Figure out what CSD means in Census data
   as_census_region_list()
 
-# This can take a while
 # We want to get household median income
 census_data_csd <- get_census(dataset='CA16', regions = regions_filtered,
                           vectors=c("v_CA16_2397"), 
@@ -109,14 +110,21 @@ postcode <- dataset %>%
 # joining the data WIP
 ```{r}
 #creating a new data set joining all customer data by "cust_id"
-cust_full = customer %>%
-  left_join(cust_dev, cust_sleep, by = cust_id)
+cust_first = customer %>%
+  right_join(cust_dev, by = "cust_id")
 
 #creating a data set joining device data by "device_name"
 device_full = device_data %>% 
   rename("device_name" = "Device name") %>%
-  left_right(device) %>%
+  right_join(device, by = "device_name") %>%
   clean_names()
+
+# get the device each customer owns
+cust_full = cust_first %>%
+  left_join(device_full, by = "dev_id")
+
+cust_full = cust_full %>%
+   right_join(cust_sleep, by ="cust_id")
 ```
 
 # cleaning the data
@@ -135,38 +143,204 @@ device_full = device_data %>%
 
 #exporting clean data to folder
 
+
 ```{r}
+# ive done the model, table, and intepretations. I state what this means for mingar. How do i go from here? Should I justify why i have used this model?   Should i have the testing different models part in the main report? Yes, interpret the results and the summaries. where do i put the stuff about checking other models? in the actual report, but only state the final results. Should i state the assumptions for poisson in the main report? assumptiuons should be checked in the technical report.  should i do one mode with na, one model without, and then compare?
+```
 
+```{r}
+# Finishing up data prep as informed by working on data summaries, visualizations, models and model assumption checking (and doing these things). should this all be in data prep section?
+```
 
+```{r}
+# table with coeff and confint
+```
 
+```{r}
+# Our units/subjects are independent, even through observations within each subject are taken not to to be. (Replace subjects with ‘groups,’ same idea.) not sure if satisfied
 
+# Random effects come from a normal distribution. not possible, our random effect is a factor
 
+# The random effects errors and within-unit residual errors have constant variance. I.e., Are variances of data (transformed by the link function) homogeneous across categories? how to check this
 
+# The chosen link function is appropriate / the model is correctly specified. check if the model fits poisson?
+```
 
-
-
+```{r}
+# mean = variance
+# should the main report include the process we took to reach the final model, or should it just have the report on the final model? Just final model. SHould we include info on the other variables? 
 ```
 
 
+### Residual Plot
+```{r}
+# Do I put it in the main report
+#yhatXresidZero
+res.df <- data.frame(resid = residuals(modrace2), fit = fitted(modrace2))
+ggplot(res.df, aes(x = fit, y = resid)) +
+  geom_point() +
+  ylab("Residuals from model") +
+  xlab("Fitted values from model") +
+  theme_minimal()
+# why does the residual plot look weird? what does this say about the model? 
+```
+
+
+```{r}
+cust_full$emoji_modifier = fct_relevel(cust_full$emoji_modifier, "U+1F3FB")
+```
+
+```{r}
+cust_full = cust_full %>%
+  mutate(age = floor(age_calc(dob, units = "years")),
+         device_age = floor(age_calc(released_2, units = "years")))
+```
+
+
+```{r}
+modrace = glmer(flags ~ emoji_modifier + sex + age + device_name + (1 | cust_id), 
+        family='poisson', offset = log(duration), data= cust_full)
+summary(modrace)
+# why did the na's drop? how do i include them in my model?
+# how do i justify  adding different variables to my model? Why is it showing this red output?
+```
+
+
+the mean flags per minute of sleep, controlling for each person is 2.165, 3.2414, 6.600, and 10.90 times higher for each darker skin tone than the lighest skin tone. Mingar needs to do something about this. 
+
+```{r}
+summary(modrace2)
+```
+```{r}
+cust_full = cust_full %>%
+  filter(!is.na(sex))
+  
+```
+
+```{r}
+modrace2 = glmer(flags ~ emoji_modifier + age + (1 | cust_id), family='poisson', offset = log(duration), data= cust_full)
+modrace = glmer(flags ~ emoji_modifier + sex + age + device_name + (1 | cust_id), 
+        family='poisson', offset = log(duration), data= cust_full)
+summary(modrace)
+summary(modrace2)
+
+```
+
+```{r}
+anova(modrace2, modrace, test="Chisq")
+
+lmtest::lrtest(modrace2, modrace)
+```
+Using both anova and lmtest, we can reject the null that modrace is just as goof as modrace2. We have modrace2 as final model. 
+
+# Goodness of fit test
+```{r}
+1-pchisq(modrace$deviance, modrace$df.residual)
+# how do i do gof for glmm?
+```
+
+```{r}
+# limitations: there may be overdspersion ?
+# NA's dropping from the model? 
+```
+
+
+# check its actually poisson
+```{r}
+cust_full %>%
+  ggplot(data =., aes(x=flags, fill = emoji_modifier)) +
+  geom_histogram()+ 
+  theme_minimal()
+# seems it is poisson, due to rightly skewed graph. 
+```
+
+# check mean = variance
+```{r}
+cust_full %>%
+    group_by(emoji_modifier) %>%
+    dplyr::summarize(MeanCount = mean(flags, na.rm=TRUE),
+              VarCount = var(flags, na.rm=TRUE),
+              MeanRate = mean(flags/duration, na.rm=TRUE),
+              VarRate = var(flags/duration, na.rm=TRUE),
+              n = n()) %>% 
+  knitr::kable(booktabs=T, 
+        caption = 'The mean and variance of flags in slap by skin tone emoji.')
+```
+we see that both mean count and mean rate for darker skin tones is high. mean and variance are pretty close, so we can assume that this assumption is satisfied for the most part
 
 
 
+# empirical logit plot?
+# table for coefficients and ci
+
+```{r}
+# how to properly do confit for the model?
+par_table = cbind(est = summary(
+  modrace)$coef[,1],
+  confint(modrace))
+rownames(par_table)[1]= "Intercept"
+
+round(exp(par_table),3) %>% 
+  knitr::kable(caption = "table.")
+```
+```{r}
+(Confint = confint(modrace2))
+```
+
+# proportion table of all respondents that have from 0-10 flags in their sleep, that wear each device, etc
 
 
+# bar charts showing the differences between sub populations
+```{r}
+ggplot(data = cust_full, aes(x = flags, fill = emoji_modifier)) +
+  geom_bar(position = "fill") +
+  scale_fill_grey() +
+  theme_minimal() +
+  labs(fill = "Skin Tone", x = "Flags", y = "Proportion")
+```
+```{r}
+cust_full %>%
+  group_by(emoji, lose.wt) %>%
+  summarise(mean = mean(bmipct), sd = sd(bmipct), 
+            n = n(), .groups = "drop")
+```
+
+```{r}
+cust_full %>%
+  ggplot(data =., aes(x=duration, fill = emoji_modifier)) +
+  geom_histogram()+ 
+  theme_minimal()
+```
+
+```{r}
+cust_full %>%
+  ggplot(data =., aes(x=age, fill = emoji_modifier)) +
+  geom_histogram()+ 
+  theme_minimal()
+```
+what effect does this say about flags? young are more likely to get flagged?
 
 
+```{r}
+with(cust_full,round(prop.table(table(emoji_modifier,sex),1),3)) %>% 
+  knitr::kable(caption = 'Proportion of colleges and universities within region in the campus crime data set.')
+```
+```{r}
+with(cust_full,(prop.table(table(emoji_modifier)))) %>% 
+  knitr::kable(caption = 'Proportion of colleges and universities within region in the campus crime data set.')
+```
 
+# flag and age
 
-
-
-
-
-
-
-
-
-
-
-
-
+```{r}
+plot <- cust_full %>% group_by(age) %>% 
+  summarise(mnflag = mean(flags),
+            logmnflag = log(mnflag), n=n())
+ggplot(plot, aes(x=age, y=logmnflag)) +
+  geom_point()+
+  geom_smooth(method = "loess", size = 1.5)+
+  xlab("Age of the person") +
+  ylab("Log of the empirical mean number of flags") +
+  theme_minimal()
+```
 

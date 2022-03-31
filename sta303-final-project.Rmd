@@ -1,7 +1,7 @@
 ---
 title: "Report title"
 subtitle: "Subtitle that indicates findings"
-author: "Report prepared for MINGAR by [consulting company name]"
+author: "Report prepared for MINGAR by Arpesso"
 date: 2022-04-07
 lang: "en"
 output:
@@ -22,7 +22,6 @@ library(lme4)
 library(rvest)
 library(polite)
 library(lmtest)
-library()
 
 # this should suppress all code and messages
 knitr::opts_chunk$set(include=FALSE)
@@ -61,6 +60,7 @@ _The [module 4 writing prompt](https://sta303-bolton.github.io/sta303-w22-course
 # Technical report
 _This part of the report is much more comprehensive than the executive summary. The audience is statistics/data-minded people, but you should NOT include code or unformatted R output here._
 
+We included all variables to make sure it wasnt a fault of inherent qualities of the device. Do we do eda here? After checking our model was the best. I checked asumptions of ... state poisson assumptions. eg plot 1 shows assumptions of model is satisfied? show model summary but not actual code. How do i put anova into a summary table? You dont, justbsay that i compared some models to toher models and say this was best. If the actual model should be showed here, where do we put the fact that we had an original model? 
 
 ## Introduction
 
@@ -69,9 +69,21 @@ _Provide a brief introduction to your report and outline what the report will co
 ### Research questions
 _Use bullet points to to describe the research questions you are going to address. Write in full sentences._
 
-## Informative title for section addressing a research question
+After accounting for other possible explanations, do Mingar devices flag darker skinned users of their sleep devices more than lighter skinned users per minute of sleep? 
+
+## Mingar Devices are more likely to flag darker skinned users than lighter skinned users
 
 _For each research question, you will want to briefly describe any data manipulation, show some exploratory plots/summary tables, report on any methods you use (i.e. models you fit) and the conclusions you draw from these_
+
+We create a model to find the relationship between sleep flags per minute and race, as well as visualize the data, and analyze information on flags and several explanatory variables. 
+
+To create the possible explanatory models, we created an age variable by subtracting the date of birth of the individual from date of analysis; March 30th 2022. 
+We first created a model that had all characteristics of the individual and device. That is, race, sex, age, and the device type. 
+
+After running a summary on this model we found that only the proxy variable for race and the age variables were significant. Performing an anova test showed that there was no evidence against the null hypothesis (0.2137) that the model involving only the race proxy and sex was better than the model that included the other variables. 
+
+Our final model is thus 
+
 
 ```{r}
 # This chunk provides an example of some things you can do with RMarkdown 
@@ -85,6 +97,25 @@ device_data %>%
 
 ```
 
+```{r}
+round(summary(bRes)$coef, digits=2)
+```
+
+
+```{r}
+lattice::dotplot(lme4::ranef(bRes, condVar=TRUE)) 
+```
+
+```{r}
+# Are the proportions of people being flagges  similar across race?
+prop.table(table(risk2009$sex, risk2009$lose.wt), 1)
+chisq.test(risk2009$lose.wt, risk2009$sex)
+
+# Are the proportions of people being flagges  similar across age?
+prop.table(table(risk2009$sex, risk2009$lose.wt), 1)
+chisq.test(risk2009$lose.wt, risk2009$sex)
+```
+
 ## Informative title for section addressing a research question
 
 
@@ -93,7 +124,8 @@ device_data %>%
 _In this section you will summarize your findings across all the research questions and discuss the strengths and limitations of your work. It doesn't have to be long, but keep in mind that often people will just skim the intro and the discussion of a document like this, so make sure it is useful as a semi-standalone section (doesn't have to be completely standalone like the executive summary)._
 
 ### Strengths and limitations
-
+Limitation: people could use different skin tones, and then all the people that used yellow emojis. NA was dropped from the model. Mean was not always that close to variance, so overdispersion? The goodness of fit doesnt fit well? why is this? (check textbook chapter)
+Postcode measures are not perfectly comparable for a single person, but gives the general area of the wealthj in that neighbourhood
 \newpage
 # Consultant information
 ## Consultant profiles
@@ -119,7 +151,7 @@ _You don't need to cite course materials, but consider all the the places you go
 
 \newpage
 # Appendix
-
+Appendix should have the tables which support was was said in the main body. 
 _These appendices should outline in more detail the steps taken to access the following datasets. They should NOT include code, but should briefly describe the steps and important considerations. I.e., show that you understand what needs to be considered when web scraping, protecting licensed data, etc._
 
 ## Web scraping industry data on fitness tracker devices
