@@ -74,38 +74,55 @@ After accounting for other possible explanations, do Mingar devices flag darker 
 ## Mingar Devices are more likely to flag darker skinned users than lighter skinned users
 
 _For each research question, you will want to briefly describe any data manipulation, show some exploratory plots/summary tables, report on any methods you use (i.e. models you fit) and the conclusions you draw from these_
+Using the emoji color as proxy
+The table shows the summary data on number of flags for all wearers of the devices over the several nights. 
+```{r}
+cust_full %>%
+    group_by(emoji_modifier) %>%
+    dplyr::summarize(MeanCount = mean(flags, na.rm=TRUE),
+              VarCount = var(flags, na.rm=TRUE),
+              MeanRate = mean(flags/duration, na.rm=TRUE),
+              VarRate = var(flags/duration, na.rm=TRUE),
+              n = n()) %>% 
+  knitr::kable(booktabs=T, 
+        caption = 'The mean and variance of flags in slap by skin tone emoji.')
+```
+
+We see that the mean and variance of darker skinned people tends to be more than light. This indicates that there might be a problem with race for them. 
+
+
+We look at the proportion of people in each race group
+
+```{r}
+with(cust_full,(prop.table(table(emoji_modifier)))) %>% 
+  knitr::kable(caption = 'Proportion of colleges and universities within region in the campus crime data set.')
+```
+
+The data on flags shows a rightly skewed graphs with many values at 0. We see that darker skin tones tend to have higher values. 
+```{r}
+cust_full %>%
+  ggplot(data =., aes(x=flags, fill = emoji_modifier)) +
+  geom_histogram()+ 
+  theme_minimal()
+# seems it is poisson, due to rightly skewed graph. 
+```
 
 We create a model to find the relationship between sleep flags per minute and race, as well as visualize the data, and analyze information on flags and several explanatory variables. 
 
-To create the possible explanatory models, we created an age variable by subtracting the date of birth of the individual from date of analysis; March 30th 2022. 
-We first created a model that had all characteristics of the individual and device. That is, race, sex, age, and the device type. 
+We have seen that distribution of response is poisson, and the mean and variance are very close. 
+To create the possible explanatory models, we created an age variable by subtracting the date of birth of the individual from date of analysis; March 30th 2022. For further visualization, we divided the ages into seperate age groups by decade.  We decided not to remvoe the yellow skin emojis as removing the large amount of variables could cause bias to the model. 
+We first created a model that had all characteristics of the individual and device. That is, race, sex, age, and the device type. For this model, we dropped missing variables in sex in order to compare it to the other model. 
 
-After running a summary on this model we found that only the proxy variable for race and the age variables were significant. Performing an anova test showed that there was no evidence against the null hypothesis (0.2137) that the model involving only the race proxy and sex was better than the model that included the other variables. 
+After running a summary on this model we found that only the proxy variable for race and the age variables were significant. Performing an anova test showed that there was no evidence against the null hypothesis (0.2137) that the model involving only the race proxy and sex was better than the model that included the other variables. A residual plot of this model shows that the residual plots look sctattered with no fanning, indicating constant variance of errors. We assume mingar has chosen their wearers independently. 
 
-Our final model is thus 
+Our final model is thus $$ log(flag) = \mu + \alpha_{ij1} + \alpha_{ij2} + \beta_j $$ 
+where $ \mu$ is grand mean of flags
+$\alpha_i1$ is emoji skin tone of person i, fixed effect for day j
+$\alpha_i2$ is age of person i, fixed effect for day j
+$\beta_j$ is the customer id of the person, to account for problems with independence within the same wearer. for day j
+It is offset by duration, to account for the different minutes of sleep peopke have, so rates of flags
 
-
-```{r}
-# This chunk provides an example of some things you can do with RMarkdown 
-
-# read in the data (this will only work once you've set up the data!)
-device_data <- read_csv("data-raw/device.Rds")
-
-# create a visualization
-device_data %>% 
-  ggplot(aes(x = ))
-
-```
-
-```{r}
-round(summary(bRes)$coef, digits=2)
-```
-
-
-```{r}
-lattice::dotplot(lme4::ranef(bRes, condVar=TRUE)) 
-```
-
+Check t tests if there's a problem 
 ```{r}
 # Are the proportions of people being flagges  similar across race?
 prop.table(table(risk2009$sex, risk2009$lose.wt), 1)
@@ -115,6 +132,72 @@ chisq.test(risk2009$lose.wt, risk2009$sex)
 prop.table(table(risk2009$sex, risk2009$lose.wt), 1)
 chisq.test(risk2009$lose.wt, risk2009$sex)
 ```
+
+
+exact model can be interpeted with the coefficients and confidence intervals as 
+
+```{r}
+# how to properly do confit for the model?
+par_table = cbind(est = summary(
+  modrace2)$coef[,1],
+  confint(modrace2))
+rownames(par_table)[1]= "Intercept"
+
+round(exp(par_table),3) %>% 
+  knitr::kable(caption = "table.")
+# sth is wrong with this table
+```
+
+Interpreting this, we see that there are significant differences between skin tones, witht he flags becoming more prevalent as skin tones go up. So we see that holding age relavent, skin tone does have an effect on false flag for disruption. Also holding race constant, age also affects sleep scores by... 
+
+
+we also see effect of race by 
+
+```{r}
+ggplot(data = cust_full, aes(x = flags, fill = emoji_modifier)) +
+  geom_bar(position = "fill") +
+  scale_fill_grey() +
+  theme_minimal() +
+  labs(fill = "Skin Tone", x = "Flags", y = "Proportion")
+```
+
+As stated earlier, age is also significant we see this by 
+
+```{r}
+plot <- cust_full %>% group_by(age) %>% 
+  summarise(mnflag = mean(flags),
+            logmnflag = log(mnflag), n=n())
+ggplot(plot, aes(x=age, y=logmnflag)) +
+  geom_point()+
+  geom_smooth(method = "loess", size = 1.5)+
+  xlab("Age of the person") +
+  ylab("Log of the empirical mean number of flags") +
+  theme_minimal()
+```
+
+```{r}
+cust_full %>%
+    group_by(age_group) %>%
+    dplyr::summarize(MeanCount = mean(flags, na.rm=TRUE),
+              VarCount = var(flags, na.rm=TRUE),
+              MeanRate = mean(flags/duration, na.rm=TRUE),
+              VarRate = var(flags/duration, na.rm=TRUE),
+              n = n()) %>% 
+  knitr::kable(booktabs=T, 
+        caption = 'The mean and variance of flags in slap by skin tone emoji.')
+```
+Interaction between main variable and other variable 
+```{r}
+with(cust_full,round(prop.table(table(emoji_modifier,age_group),1),3)) %>% 
+  knitr::kable(caption = 'Proportion of colleges and universities within region in the campus crime data set.')
+```
+
+
+```{r}
+round(summary(bRes)$coef, digits=2)
+```
+
+
 
 ## Informative title for section addressing a research question
 
@@ -132,9 +215,13 @@ Postcode measures are not perfectly comparable for a single person, but gives th
 
 *Complete this section with a brief bio for each member of your group. If you are completing the project individually, you only need to complete one for yourself. In that case, change the title of this section to 'Consultant profile' instead. Examples below. This section is only marked for completeness, clarity and professionalism, not 'truth' so you can write it as if we're a few years in the future. Put your current degree in as completed and/or add your first choice grad school program, whatever you like. What skills related skills would you most like to highlight? What job title do you want?*
 
-**Statsy McStatsstats**. Statsy is a senior consultant with Eminence Analytics. She specializes in data visualization. Statsy earned her Bachelor of Science, Specialist in Statistics Methods and Practice, from the University of Toronto in 2023.
+**Thomas D'Onofrio** Statsy is a senior consultant with Eminence Analytics. She specializes in data visualization. Statsy earned her Bachelor of Science, Specialist in Statistics Methods and Practice, from the University of Toronto in 2023.
 
-**Datana Scatterplot**. Datana is a junior consultant with Eminence Analytics. They specialize in reproducible analysis and statistical communication. Datana earned their Bachelor of Science, Majoring in Computer Science and Statistics from the University of Toronto in 2024.
+**Pablo Mercado**. Statsy is a senior consultant with Eminence Analytics. She specializes in data visualization. Statsy earned her Bachelor of Science, Specialist in Statistics Methods and Practice, from the University of Toronto in 2023.
+
+**Olaedo Okpareke**. Olaedo Okpareke is a senior consultant at Arpesso Analytics. She specializes in statistical anaylsis and data visualization in R and Python. Olaedo also specializes in statstical surveys and sampling, as well as financial risk analysis. Olaedo earned her Bachelor od Science in Economics and Statistics from the University of Toronto in 2023, and her masters in Economics Data analysis from University of Toronto in 2026. 
+
+**Walid Roudani**. Datana is a junior consultant with Eminence Analytics. They specialize in reproducible analysis and statistical communication. Datana earned their Bachelor of Science, Majoring in Computer Science and Statistics from the University of Toronto in 2024.
 
 ## Code of ethical conduct
 

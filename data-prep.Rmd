@@ -196,26 +196,13 @@ cust_full = cust_full %>%
          device_age = floor(age_calc(released_2, units = "years")))
 ```
 
-
-```{r}
-modrace = glmer(flags ~ emoji_modifier + sex + age + device_name + (1 | cust_id), 
-        family='poisson', offset = log(duration), data= cust_full)
-summary(modrace)
-# why did the na's drop? how do i include them in my model?
-# how do i justify  adding different variables to my model? Why is it showing this red output?
-```
-
-
-the mean flags per minute of sleep, controlling for each person is 2.165, 3.2414, 6.600, and 10.90 times higher for each darker skin tone than the lighest skin tone. Mingar needs to do something about this. 
-
-```{r}
-summary(modrace2)
-```
 ```{r}
 cust_full = cust_full %>%
   filter(!is.na(sex))
   
 ```
+
+
 
 ```{r}
 modrace2 = glmer(flags ~ emoji_modifier + age + (1 | cust_id), family='poisson', offset = log(duration), data= cust_full)
@@ -223,8 +210,11 @@ modrace = glmer(flags ~ emoji_modifier + sex + age + device_name + (1 | cust_id)
         family='poisson', offset = log(duration), data= cust_full)
 summary(modrace)
 summary(modrace2)
-
+# why did the na's drop? how do i include them in my model?
+# how do i justify  adding different variables to my model? Why is it showing this red output?
 ```
+
+the mean flags per minute of sleep, controlling for each person is 2.165, 3.2414, 6.600, and 10.90 times higher for each darker skin tone than the lighest skin tone. Mingar needs to do something about this. 
 
 ```{r}
 anova(modrace2, modrace, test="Chisq")
@@ -270,8 +260,7 @@ we see that both mean count and mean rate for darker skin tones is high. mean an
 
 
 
-# empirical logit plot?
-# table for coefficients and ci
+
 
 ```{r}
 # how to properly do confit for the model?
@@ -311,10 +300,29 @@ cust_full %>%
   geom_histogram()+ 
   theme_minimal()
 ```
+```{r}
+cust_full = cust_full %>%
+  mutate(age_group = case_when (
+             age <= 20 ~ "Less than 20",
+             age <= 30 ~ "20 to 30",
+             age <= 40 ~ "30 to 40",
+             age <= 50 ~ "40 to 50",
+             age <= 60 ~ "50 to 60",
+             age <= 70 ~ "60 to 70",
+             age <= 80 ~ "70 to 80",
+             age <= 100 ~ "80 or more",
+             TRUE ~ "None"
+             ))
+```
+
+
+```{r}
+unique(cust_full$age_group)
+```
 
 ```{r}
 cust_full %>%
-  ggplot(data =., aes(x=age, fill = emoji_modifier)) +
+  ggplot(data =., aes(x=flags, fill = age_group)) +
   geom_histogram()+ 
   theme_minimal()
 ```
@@ -322,7 +330,7 @@ what effect does this say about flags? young are more likely to get flagged?
 
 
 ```{r}
-with(cust_full,round(prop.table(table(emoji_modifier,sex),1),3)) %>% 
+with(cust_full,round(prop.table(table(emoji_modifier,age_group),1),3)) %>% 
   knitr::kable(caption = 'Proportion of colleges and universities within region in the campus crime data set.')
 ```
 ```{r}
