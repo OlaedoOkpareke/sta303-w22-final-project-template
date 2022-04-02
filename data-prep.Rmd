@@ -34,6 +34,8 @@ library(janitor)
 library(cancensus)
 library(haven)
 library(eeptools)
+library(lme4) 
+library(lmtest)
 ```
 
 # Loading client data
@@ -111,7 +113,10 @@ postcode <- dataset %>%
 ```{r}
 #creating a new data set joining all customer data by "cust_id"
 cust_full = customer %>%
-  left_join(cust_dev, cust_sleep, by = "cust_id")
+  left_join(cust_dev, by = "cust_id") 
+  
+cust_sleep_full = cust_full %>%
+  right_join(cust_sleep, by = "cust_id")
 
 #creating a data set joining device data by "device_name"
 device_full = device_data %>% 
@@ -131,7 +136,11 @@ data_full = cust_full %>%
 marketing_data = data_full %>%
   select(-dev_id,-line_2,-released_2)
 
-#socialmedia_data = 
+socialmedia_data = cust_sleep_full %>%
+  left_join(device_full) %>%
+  left_join(geo_data) %>%
+  distinct(cust_id, .keep_all = TRUE) 
+  
 ```
 
 # cleaning the data
@@ -165,6 +174,46 @@ marketing_data = marketing_data %>%
                         ifelse(hhld_median_inc > 85981, "upper class"))))
 
 
+socialmedia_data = socialmedia_data %>%
+  drop_na(sex,pronouns)
+  
+socialmedia_data$emoji_modifier = recode(socialmedia_data$emoji_modifier, 
+                                       `U+1F3FB` = "light skin tone",
+                                       `U+1F3FC` = "medium-light skin tone",
+                                       `U+1F3FD` = "medium skin tone",
+                                       `U+1F3FE` = "medium-dark skin tone",
+                                       `U+1F3FF` = "dark skin tone")
+
+socialmedia_data$emoji_modifier = socialmedia_data$emoji_modifier %>%
+  replace_na("default skin tone")
+
+socialmedia_data$emoji_modifier = factor(socialmedia_data$emoji_modifier, levels = c("default skin tone",
+                                                                                 "light skin tone",
+                                                                                 "medium-light skin tone",
+                                                                                 "medium skin tone",
+                                                                                 "medium-dark skin tone",
+                                                                                 "dark skin tone"))
+
+socialmedia_data = socialmedia_data %>%
+  mutate(affordable = ifelse(line == "Advance" | line == "Active", TRUE, FALSE),
+         age = floor(age_calc(dob, units = "years")),
+         income_class = ifelse(hhld_median_inc <= 65327, "lower class",
+                        ifelse(65327 < hhld_median_inc & hhld_median_inc <= 85981, "middle class", 
+                        ifelse(hhld_median_inc > 85981, "upper class"))),
+         age_group = case_when(
+             age <= 20 ~ "Less than 20",
+             age <= 30 ~ "20 to 30",
+             age <= 40 ~ "30 to 40",
+             age <= 50 ~ "40 to 50",
+             age <= 60 ~ "50 to 60",
+             age <= 70 ~ "60 to 70",
+             age <= 80 ~ "70 to 80",
+             age <= 100 ~ "80 or more",
+             TRUE ~ "None"
+             )) %>%
+  select(-dev_id, -device_name,-line_2,-released_2)
+
+
 ```
 
 
@@ -173,11 +222,93 @@ marketing_data = marketing_data %>%
 ```{r}
 
 write.csv(marketing_data, "data/marketing_data")
-
+write.csv(socialmedia_data, "data/socialmedia_data")
 
 
 
 ```
+
+
+
+
+# Model Comparisons for Sleep scores
+```{r}
+modrace2 = glmer(flags ~ emoji_modifier + age + (1 | cust_id), family='poisson', offset = log(duration), data= cust_full)
+modrace = glmer(flags ~ emoji_modifier + sex + age + device_name + (1 | cust_id), 
+        family='poisson', offset = log(duration), data= cust_full)
+summary(modrace)
+summary(modrace2)
+# how do i justify  adding different variables to my model? Why is it showing this red output?
+```
+
+the mean flags per minute of sleep, controlling for each person is 2.165, 3.2414, 6.600, and 10.90 times higher for each darker skin tone than the lighest skin tone. Mingar needs to do something about this. 
+
+```{r}
+anova(modrace2, modrace, test="Chisq")
+
+lmtest::lrtest(modrace2, modrace)
+```
+
+
+#exporting clean data to folder
+
+
+```{r}
+#  Should I justify why i have used this model?   Should i have the testing different models part in the main report? Yes, interpret the results and the summaries. where do i put the stuff about checking other models? in the actual report, but only state the final results. Should i state the assumptions for poisson in the main report? assumptiuons should be checked in the technical report.  should i do one mode with na, one model without, and then compare?
+```
+
+```{r}
+# Finishing up data prep as informed by working on data summaries, visualizations, models and model assumption checking (and doing these things). should this all be in data prep section?
+```
+
+
+```{r}
+# Our units/subjects are independent, even through observations within each subject are taken not to to be. (Replace subjects with ‘groups,’ same idea.) not sure if satisfied
+
+# Random effects come from a normal distribution. not possible, our random effect is a factor
+
+# The random effects errors and within-unit residual errors have constant variance. I.e., Are variances of data (transformed by the link function) homogeneous across categories? how to check this
+
+# The chosen link function is appropriate / the model is correctly specified. check if the model fits poisson?
+```
+
+```{r}
+# mean = variance
+# should the main report include the process we took to reach the final model, or should it just have the report on the final model? Just final model. SHould we include info on the other variables? 
+```
+
+
+### Residual Plot
+```{r}
+# Do I put it in the main report
+#yhatXresidZero
+res.df <- data.frame(resid = residuals(modrace2), fit = fitted(modrace2))
+ggplot(res.df, aes(x = fit, y = resid)) +
+  geom_point() +
+  ylab("Residuals from model") +
+  xlab("Fitted values from model") +
+  theme_minimal()
+# why does the residual plot look weird? what does this say about the model? 
+```
+
+
+
+
+# Goodness of fit test
+```{r}
+1-pchisq(modrace$deviance, modrace$df.residual)
+# how do i do gof for glmm?
+```
+
+```{r}
+# limitations: there may be overdspersion ?
+# NA's dropping from the model? 
+```
+
+
+
+
+
 
 
 
