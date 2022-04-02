@@ -103,6 +103,7 @@ dataset = read_sav("data-raw/pccfNat_fccpNat_082021sav.sav")
 #creating data frame and selecting only relevant variables
 postcode <- dataset %>%
   select(PC, CSDuid)
+
 ```
 
 
@@ -154,6 +155,8 @@ cust_full = cust_full %>%
 ```
 
 # Loading client data
+
+
 ```{r}
 marketing_data = cust_mark %>%
   select(-dev_id, -device_name,-line_2,-released_2)
@@ -162,7 +165,11 @@ marketing_data = cust_mark %>%
 ```{r}
 postcode = break_glass_in_case_of_emergency %>%
   rename(.,postcode = PC)
-marketing_data = postcode %>%
+
+geo_data = postcode %>%
+  left_join(median_income)
+  
+marketing_data = geo_data %>%
   left_join(postcode, by="postcode")
 ```
 
@@ -184,7 +191,7 @@ marketing_data = marketing_data %>%
   mutate(affordable = ifelse(line == "Advance" | line == "Active", TRUE, FALSE),
          income_class = ifelse(hhld_median_inc <= 65327, "lower class",
                         ifelse(65327 < hhld_median_inc & hhld_median_inc <= 85981, "middle class", 
-                        ifelse(hhld_median_inc > 85981, "upper class")))) # why did you choose these criteria?
+                        ifelse(hhld_median_inc > 85981, "upper class")))) 
 ```
 
 ```{r}
@@ -216,7 +223,7 @@ lmtest::lrtest(modrace2, modrace)
 
 
 ```{r}
-# ive done the model, table, and intepretations. I state what this means for mingar. How do i go from here? Should I justify why i have used this model?   Should i have the testing different models part in the main report? Yes, interpret the results and the summaries. where do i put the stuff about checking other models? in the actual report, but only state the final results. Should i state the assumptions for poisson in the main report? assumptiuons should be checked in the technical report.  should i do one mode with na, one model without, and then compare?
+#  Should I justify why i have used this model?   Should i have the testing different models part in the main report? Yes, interpret the results and the summaries. where do i put the stuff about checking other models? in the actual report, but only state the final results. Should i state the assumptions for poisson in the main report? assumptiuons should be checked in the technical report.  should i do one mode with na, one model without, and then compare?
 ```
 
 ```{r}
