@@ -18,6 +18,7 @@ output:
 
 - You do not need to keep the structure below.
 
+
 # Set up
 
 ```{r, libraries}
@@ -45,6 +46,10 @@ customer <- readRDS("data-raw/customer.Rds")
 device <- readRDS("data-raw/device.Rds")
 cust_dev <- readRDS("data-raw/cust_dev.Rds")
 cust_sleep <- readRDS("data-raw/cust_sleep.Rds")
+```
+
+```{r}
+mark = read_csv("data/marketing_data (1)")
 ```
 
 # Getting external data

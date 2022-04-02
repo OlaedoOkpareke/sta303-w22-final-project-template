@@ -1,5 +1,5 @@
 ---
-title: "Report title"
+title: "Report on MINGAR Customers and Device Functionability"
 subtitle: "Subtitle that indicates findings"
 author: "Report prepared for MINGAR by Arpesso"
 date: 2022-04-07
@@ -27,9 +27,6 @@ library(lmtest)
 knitr::opts_chunk$set(include=FALSE)
 ```
 
-# General comments (you can delete this section)
-
-_Before making any changes, knit this Rmd to PDF and change the name of the PDf to something like 'original-instructions.pdf', or whatever you like (it is just for your reference).. Then you can delete this section and if you want to check what it said, just open the other PDF. You don't HAVE to use this particular template, but you DO need to write you report in RMarkdown and include a cover page._
 
 _The cover page must be a single stand alone page and have:_
 
@@ -69,7 +66,10 @@ _Provide a brief introduction to your report and outline what the report will co
 ### Research questions
 _Use bullet points to to describe the research questions you are going to address. Write in full sentences._
 
-After accounting for other possible explanations, do Mingar devices flag darker skinned users of their sleep devices more than lighter skinned users per minute of sleep? 
+* _What are the differences between customers buying affordable fitness trackers/smart watches and those who don't?_
+
+* After accounting for other possible explanations, do Mingar devices flag darker skinned users of their sleep devices more than lighter skinned users per minute of sleep? 
+
 
 ## Mingar Devices are more likely to flag darker skinned users than lighter skinned users
 
@@ -88,7 +88,7 @@ cust_full %>%
         caption = 'The mean and variance of flags in slap by skin tone emoji.')
 ```
 
-We see that the mean and variance of darker skinned people tends to be more than light. This indicates that there might be a problem with race for them. 
+We see that the mean and variance of darker skinned people tends to be more than light. This indicates that there might be a problem with race for them. we see that both mean count and mean rate for darker skin tones is high. mean and variance are pretty close, so we can assume that this assumption is satisfied for the most part
 
 
 We look at the proportion of people in each race group
@@ -120,7 +120,7 @@ where $ \mu$ is grand mean of flags
 $\alpha_i1$ is emoji skin tone of person i, fixed effect for day j
 $\alpha_i2$ is age of person i, fixed effect for day j
 $\beta_j$ is the customer id of the person, to account for problems with independence within the same wearer. for day j
-It is offset by duration, to account for the different minutes of sleep peopke have, so rates of flags
+It is offset by duration, to account for the different minutes of sleep peopke have, so they may have different rates of flags
 
 Check t tests if there's a problem 
 ```{r}
@@ -137,11 +137,10 @@ chisq.test(risk2009$lose.wt, risk2009$sex)
 exact model can be interpeted with the coefficients and confidence intervals as 
 
 ```{r}
-# how to properly do confit for the model?
+
 par_table = cbind(est = summary(
   modrace2)$coef[,1],
   confint(modrace2))
-rownames(par_table)[1]= "Intercept"
 
 round(exp(par_table),3) %>% 
   knitr::kable(caption = "table.")
@@ -161,7 +160,7 @@ ggplot(data = cust_full, aes(x = flags, fill = emoji_modifier)) +
   labs(fill = "Skin Tone", x = "Flags", y = "Proportion")
 ```
 
-As stated earlier, age is also significant we see this by 
+This figure shows the estimated value and the confidence intervals. The y is log due to the poisson nature if the response. As stated earlier, age is also significant we see this by. we see young are more likely to get flagged
 
 ```{r}
 plot <- cust_full %>% group_by(age) %>% 
@@ -201,6 +200,10 @@ round(summary(bRes)$coef, digits=2)
 
 ## Informative title for section addressing a research question
 
+* _Affordable items are defined True when products are of the lines "Active" or "Advance" and False otherwise._
+* _This makes Affordable items a binomial variable so we can use the binomial distribution for the model._
+* _We define differences in customers by their income, age, gender,and specific device features by model._
+* _We define income group based on the Quantiles of the dataset._
 
 ## Discussion
 
@@ -209,11 +212,12 @@ _In this section you will summarize your findings across all the research questi
 ### Strengths and limitations
 Limitation: people could use different skin tones, and then all the people that used yellow emojis. NA was dropped from the model. Mean was not always that close to variance, so overdispersion? The goodness of fit doesnt fit well? why is this? (check textbook chapter)
 Postcode measures are not perfectly comparable for a single person, but gives the general area of the wealthj in that neighbourhood
+
 \newpage
+
 # Consultant information
 ## Consultant profiles
 
-*Complete this section with a brief bio for each member of your group. If you are completing the project individually, you only need to complete one for yourself. In that case, change the title of this section to 'Consultant profile' instead. Examples below. This section is only marked for completeness, clarity and professionalism, not 'truth' so you can write it as if we're a few years in the future. Put your current degree in as completed and/or add your first choice grad school program, whatever you like. What skills related skills would you most like to highlight? What job title do you want?*
 
 **Thomas D'Onofrio** Statsy is a senior consultant with Eminence Analytics. She specializes in data visualization. Statsy earned her Bachelor of Science, Specialist in Statistics Methods and Practice, from the University of Toronto in 2023.
 
@@ -225,11 +229,13 @@ Postcode measures are not perfectly comparable for a single person, but gives th
 
 ## Code of ethical conduct
 
-_This section should be fairly short, no more than half a page. Assume a general audience, much like your executive summary._
+In our report, we represented all summaries and visualizations honestly. We did not create any misleading visualizations. When modifcations to variables were made, they were very explicitly stated and justified. We stated clearly all limitations of the analysis, and any failings of the data or our method. 
 
-* _Make at least three relevant statements about your company's approach to ethical statistical consulting. These should be appropriately in line with professional conduct advice like the (Statistical Society of Canada Code of Conduct)[https://ssc.ca/sites/default/files/data/Members/public/Accreditation/ethics_e.pdf] or the (Ethical Guidelines for Statistical Practice from the American Statistical Society)[https://www.amstat.org/ASA/Your-Career/Ethical-Guidelines-for-Statistical-Practice.aspx]. For example, "the customer is always right" ISN'T the type of thing an ethical statistical consultant would include._
-*	_Be very careful not to just copy and paste from these other documents! Put things in your own words._
+We did not disclose any personal customer information from MINGAR to any third party, as disclosed by the Non-disclosure agreement. ALl confidential information was analyzed solely by the statistic consultants for the report at Arpesso. As no consent was given by MINGAR to spread the customer information, and was not durected by the court of law, the information was kept confidential. 
 
+In preparing the report, Arpesso remained objective with handling of the data, and did not modify any variables or give false reuslts to uphold personal biases. The statistical procedures used to create the data was done based on the data itself and not on personal decisions.
+
+All sensitive customer information was kept anonymized. Arpesso did not attemot to use the infrmation to identify individuals. To uphold customer's proivacy, All personal informationwas used solely for the purpose of analysis and no non-essential identifying information was used.
 
 \newpage
 # References
@@ -238,6 +244,7 @@ _You don't need to cite course materials, but consider all the the places you go
 
 \newpage
 # Appendix
+
 Appendix should have the tables which support was was said in the main body. 
 _These appendices should outline in more detail the steps taken to access the following datasets. They should NOT include code, but should briefly describe the steps and important considerations. I.e., show that you understand what needs to be considered when web scraping, protecting licensed data, etc._
 
