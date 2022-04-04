@@ -126,7 +126,9 @@ device_full = device_data %>%
 
 geo_data = postcode %>%
   left_join(median_income) %>%
-  rename("postcode"  = "PC")
+  rename("postcode"  = "PC") %>%
+  group_by(postcode) %>%
+  summarize(hhld_median_inc = mean(hhld_median_inc))
 
 data_full = cust_full %>%
   left_join(device_full) %>%
@@ -210,7 +212,7 @@ socialmedia_data = socialmedia_data %>%
              age <= 100 ~ "80 or more",
              TRUE ~ "None"
              )) %>%
-  select(-dev_id, -device_name,-line_2,-released_2)
+  select(-dev_id, -line_2,-released_2)
 
 
 ```
@@ -232,9 +234,9 @@ write_csv(socialmedia_data, "data/socialmedia_data")
 
 # Model Comparisons for Sleep scores
 ```{r}
-modrace2 = glmer(flags ~ emoji_modifier + age + (1 | cust_id), family='poisson', offset = log(duration), data= cust_full)
+modrace2 = glmer(flags ~ emoji_modifier + age + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
 modrace = glmer(flags ~ emoji_modifier + sex + age + device_name + (1 | cust_id), 
-        family='poisson', offset = log(duration), data= cust_full)
+        family='poisson', offset = log(duration), data= socialmedia_data)
 summary(modrace)
 summary(modrace2)
 # how do i justify  adding different variables to my model? Why is it showing this red output?
@@ -309,7 +311,24 @@ ggplot(res.df, aes(x = fit, y = resid)) +
 
 
 
-
+```{r}
+ggplot(data = marketing_data, aes(x = factor(income_class), fill = affordable)) +
+  geom_bar(position = "fill") +
+  scale_fill_grey() +
+  theme_minimal() +
+  labs(fill = "buy newer", x = "Income class", y = "Proportion")
+```
+```{r}
+emplogit2 <- marketing_data %>%
+  group_by(income_class, age) %>%
+  summarise(propnew = mean(affordable), n = n()) %>%
+  mutate(propnew = ifelse(propnew==0, .01, propnew)) %>%
+  mutate(emplogit = log(propnew / (1 - propnew)))
+ggplot(emplogit2, aes(x = age, y = emplogit, color = income_class)) +
+  geom_point(aes(shape = income_class)) +
+  geom_smooth(aes(linetype = income_class), method = "lm") +
+  xlab("Age") + ylab("Empirical logits")
+```
 
 
 

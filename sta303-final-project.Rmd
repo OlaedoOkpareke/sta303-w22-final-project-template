@@ -1,7 +1,7 @@
 ---
 title: "Report title"
 subtitle: "Subtitle that indicates findings"
-author: "Report prepared for MINGAR by [consulting company name]"
+author: "Report prepared for MINGAR by Arpesso"
 date: 2022-04-07
 lang: "en"
 output:
@@ -16,13 +16,16 @@ titlepage-rule-color: "FFFFFF"
 titlepage-rule-height: 2
 ---
 
-```{r, message = FALSE, echo=FALSE}
+```{r, message = FALSE, echo=FALSE, warning=FALSE}
 library(tidyverse)
 library(lme4)
 library(rvest)
 library(polite)
 library(lmtest)
-library()
+library(mgcv)
+library(gridExtra)
+library(knitr)
+library(lattice)
 
 # this should suppress all code and messages
 knitr::opts_chunk$set(include=FALSE)
@@ -69,23 +72,90 @@ _Provide a brief introduction to your report and outline what the report will co
 ### Research questions
 _Use bullet points to to describe the research questions you are going to address. Write in full sentences._
 
-## Informative title for section addressing a research question
+* _What are the differences between customers buying affordable fitness trackers/smart watches and those who don't?_
+* _Affordable items are defined True when products are of the lines "Active" or "Advance" and False otherwise._
+* _This makes Affordable items a binomial variable so we can use the binomial distribution for the model._
+* _We define differences in customers by their income, age, gender,and specific device features by model._
+* _We define income group based on the Quantiles of the dataset._
+
+## Marketing Team Research
+
+### Marketing Team Data Visualizations
 
 _For each research question, you will want to briefly describe any data manipulation, show some exploratory plots/summary tables, report on any methods you use (i.e. models you fit) and the conclusions you draw from these_
 
-```{r}
+```{r, message=FALSE, warning=FALSE, include = TRUE, echo = FALSE}
 # This chunk provides an example of some things you can do with RMarkdown 
 
 # read in the data (this will only work once you've set up the data!)
-device_data <- read_csv("data-raw/device.Rds")
+marketing_data <- read_csv("data/marketing_data", show_col_types = FALSE)
 
 # create a visualization
-device_data %>% 
-  ggplot(aes(x = ))
+plot1 = marketing_data %>%
+  ggplot(aes(x = affordable, fill = affordable)) +
+  geom_bar() +
+  theme(legend.position = "none")
+
+plot2 = marketing_data %>%
+  ggplot(aes(x = age)) + 
+  geom_histogram(bins = 5, fill = "dodgerblue1") +
+  theme(legend.position = "none")
+
+plot3 = marketing_data %>%
+  ggplot(aes(x = income_class, fill = income_class)) +
+  geom_bar() +
+  theme(legend.position = "none")
+
+plot4 = marketing_data %>%
+  ggplot(aes(x = sex, fill = sex)) + 
+  geom_bar() +
+  theme(legend.position = "none")
+
+plot5 = marketing_data %>%
+  ggplot(aes(x = pronouns, fill = pronouns)) +
+  geom_bar() +
+  theme(legend.position = "none")
+
+plot6 = marketing_data %>%
+  ggplot(aes(x = released)) + 
+  geom_bar(fill = "lawngreen") +
+  theme(axis.text.x = element_text(angle = 320),
+        legend.position = "none")
+
+grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=2)
 
 ```
 
-## Informative title for section addressing a research question
+
+
+### Marketing Team Model 
+
+```{r, cache=TRUE, warning=FALSE}
+market_model1 = glmer(affordable ~ factor(income_class) + (1 | postcode),
+                         data = marketing_data, family = "binomial")
+
+market_model2 = glmer(affordable ~ factor(income_class) + age + (1 | postcode),
+                        data = marketing_data, family = "binomial")
+
+lrtest(market_model1,market_model2)
+
+summary(market_model1)
+```
+
+```{r, cache=TRUE, warning=FALSE}
+market_model3 = glmer(affordable ~ factor(income_class) + age + released +(1 | postcode),
+                         data = marketing_data, family = "binomial")
+
+lrtest(market_model2,market_model3)
+
+```
+
+## Assumptions 
+```{r, cache=TRUE, warning=FALSE}
+qqmath(market_model2)
+plot(market_model2)
+```
+
 
 
 ## Discussion
