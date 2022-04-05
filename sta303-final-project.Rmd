@@ -57,7 +57,7 @@ _The [module 4 writing prompt](https://sta303-bolton.github.io/sta303-w22-course
 # Technical report
 _This part of the report is much more comprehensive than the executive summary. The audience is statistics/data-minded people, but you should NOT include code or unformatted R output here._
 
-We included all variables to make sure it wasnt a fault of inherent qualities of the device. Do we do eda here?  show model summary but not actual code. How do i put anova into a summary table? You dont, justbsay that i compared some models to toher models and say this was best. 
+
 ## Introduction
 
 _Provide a brief introduction to your report and outline what the report will cover. This section is valuable for setting scope and expectations. _
@@ -67,7 +67,7 @@ _Use bullet points to to describe the research questions you are going to addres
 
 * _What are the differences between customers buying affordable fitness trackers/smart watches and those who don't?_
 
-* After accounting for other possible explanations, do Mingar devices flag darker skinned users of their sleep devices more than lighter skinned users per minute of sleep? 
+* After accounting for other possible explanations, are Mingar devices more likely to  flag darker skinned users of their sleep devices more than lighter skinned users per minute of sleep? 
 
 
 ## Mingar Devices are more likely to flag darker skinned users than lighter skinned users
@@ -75,56 +75,64 @@ _Use bullet points to to describe the research questions you are going to addres
 _For each research question, you will want to briefly describe any data manipulation, show some exploratory plots/summary tables, report on any methods you use (i.e. models you fit) and the conclusions you draw from these_
 
 ### The Data
-In this report we create a model to find the relationship between sleep flags per minute and skin tone. We also visualize and analyze the data that shows the relationship between flags and possible explanatory variables. We use the datasets on sleep flags for people with MINGAR devices. We use the emoji variable as a proxy for skin tone. 
+In this report we create a model to find the relationship between the sleep scores of an individual and their skin tone, accounting for the duration of sleep. We also visualize and analyze the data that shows the relationship between these flags and possible explanatory variables. We use the MINGAR customer datasets, datasets on device, and data on sleep flags for people with MINGAR devices. We use the emoji variable as a proxy for skin tone. 
 
-Our variable of interest is the number of flags during a night of sleep for each person. We see that the distribution of this variable is approximately poisson as it is right skewed with many values at 0, and it appears that people with darker skintones get more flags during sleep than people of lighter skin tones. There are also many people whose true skin tone is not recorded.
+Our variable of interest is the number of flags during a night of sleep for each person. We see that the distribution of this variable is approximately poisson as it is right skewed with many values at 0. From the figure below it appears that people with darker skin tones get more quality flags during sleep than people of lighter skin tones. There are also many people whose true skin tone is not recorded.
 
-```{r, fig.cap = "Distribution of sleep disruption flags by skin tone"}
+```{r, echo = FALSE, fig.cap = "Distribution of sleep disruption flags by skin tone"}
 cust_full %>%
   ggplot(data =., aes(x=flags, fill = emoji_modifier)) +
   geom_histogram()+ 
-  theme_minimal()
+  theme_minimal() +
+  labs(x = "Flags",
+       y = "Count",
+       fill = "Skin Tone") +
+  scale_fill_brewer(palette = "Set1", labels = c("Lightest", "Medium-Light", "Medium", "Medium-Dark", "Darkest"))
 ```
 
-The following table shows the summary data on number of flags for all wearers of the devices over the several nights. The count is the number of times that flags happened per night, and rates is the number of flags per minute of sleep. We see that the mean and variance of both counts and rates for darker skinned people tends to be larger than lighter skinned people. This indicates that MINGAR moght have a problem with darker skinned people getting flagged more often. As the mean and variance are close for the most part, we can assume that this assumption for the poisson distribution is satisfied.  
+The following table shows the summary on number of flags for all wearers of the devices over the several nights. The count is the number of times that flags happened per night, and the rate is the number of flags per minute of sleep. We see that the mean and variance of both counts and rates for darker skinned people tends to be larger than lighter skinned people. This indicates that MINGAR might have a problem with darker skinned people getting flagged more often. As the mean and variance are close for the most part, we can assume that this assumption for the poisson distribution is satisfied.  
 
-```{r}
+```{r, echo = FALSE}
 cust_full %>%
     group_by(emoji_modifier) %>%
     dplyr::summarize(MeanCount = mean(flags, na.rm=TRUE),
               VarCount = var(flags, na.rm=TRUE),
               MeanRate = mean(flags/duration, na.rm=TRUE),
-              VarRate = var(flags/duration, na.rm=TRUE),
-              n = n()) %>% 
-  knitr::kable(booktabs=T, 
-        caption = 'The mean and variance for number of flags and rate of flags by skin tone.')
+              VarRate = var(flags/duration, na.rm=TRUE)) %>%
+  knitr::kable(booktabs=T,
+               col.names = c("Skin Tone", "Mean Count", "Variance of Count", "Mean Rate", "Variance of Rate"),
+             caption = 'The mean and variance for number of flags and rate of flags by skin tone.') 
 ```
 
-We look at the proportion of people in each race group. We see that lighter skinned people have more devices than lighter skinned people. 
-```{r}
+Looking at the proportion of people in the data, we see that lighter skinned people have more more information on sleep flags than darker skinned people.
+```{r, echo = FALSE}
 with(cust_full,(prop.table(table(emoji_modifier)))) %>% 
-  knitr::kable(caption = 'Proportion of people with sleep flag data in each skin tone group.')
+  knitr::kable(col.names = c("Skin Tone", "Frequency"), caption = 'Proportion of people with sleep flag data in each skin tone group.')
 ```
 ### Methods
 
-We previously confirmed the assumptions from the graph and table that the distribution of sleep flags is poisson. We assume that the people who purchased the sleep tracking devices made the decision independently, that is, our subjects are independent. As the different flags that each subject gets are likely not independent, we use a random effect to account for the violation of independence. We assume that the random effect and residual errors come from a normal distribution and have a constant variance, proven by the residual plot. As we have shown that the flag distribution is poisson, we assume that the log link used to link this response to the explanatory variables is correct. 
+* state what types of model we're looking to assume, eg is it assumption for poisson, for glmm, etc * 
+We previously confirmed the assumptions from the graph and table that the sleep flags are of the poisson distribution. We assume that the people who purchased the sleep tracking devices made the decision independently, that is, our subjects are independent. As the different flags that each subject gets are likely not independent, we use a random effect to account for the violation of independence. We assume that the  residual errors come from a normal distribution and have a constant variance, proven by the residual plot. As we have shown that the flag distribution is poisson, we assume that the log link used to link this response to the explanatory variables is correct. However, we cannot assume that our random effect is normal.  
 
-To create the main dataset, we merged the customer information data, the sleep data, and the customer device data. To create the possible explanatory models, we created an age variable by subtracting the date of birth of the individual from date of analysis; March 30th 2022. For further visualization, we divided the ages into seperate age groups by decade. We renamed the emoji variables to understandable skin tones, renaming the 'NA' variable as the default skin tone. We decided not to drop the NA variable for skintone as we felt it was improtant to fully understand  the interactions between flags and skin tone. We dropped all 'NA' values for the sex variable to make the two possible explanatory models formed comparable in size. 
+To create the main dataset, we merged the customer information data, the sleep data, and the customer device data. To create the possible explanatory models, we created an age variable by subtracting the date of birth of the individual from the date of analysis; March 30th 2022. For further visualization, we divided the ages into separate age groups by decade. We renamed the emoji variables to understandable skin tones, and removed all missing values in this variable. We dropped all missing values for the sex variable to make the two possible explanatory models formed comparable in size. 
 
-Our first possible model had all characteristics of the individual and device. That is, skin tone, sex, age, and the device type. Running the summary on this model showed that the sex of the individual and the device type were statistically insignificant. Our second model only had infomration on skin tone and age. Running the model showed both these variables as statistically significant. Performing an anova test on the two models showed that there was no evidence against the null hypothesis that the model involving only the skin tone proxy and age was better than the model that included the other variables, due to the p value of 0.2137. A residual plot of this model shows that the residual plots look scattered with no fanning, indicating constant variance of errors. When interpeting our model results, due to the poisson nature of the response we We exponentiate the results in order to interpret the coefficients.
+We used generalized linear mixed models to estimate the relationships between sleep flags and explanatory variables. Our first possible model included all the characteristics of the individual and the device, to make sure that the problem was not caused by problems inherent to the type of device, or other characteristics of the individual. These variables included skin tone, sex, age, and the device type. Running the summary on this model showed that the sex of the individual and the device type were statistically insignificant at a 5% significance level. Our second model only had the variables on skin tone and age. Running the model showed both these variables as statistically significant at a 5% level. We used a likelihood ratio test on the two models, as the assumptions needed for this type of test do not include normality or independence. The test revealed that at a p value of 0.2137, there was no evidence against the null hypothesis that the model involving only skin tone and age was better than the model that included the other variables. A residual plot of this model shows that the residual plots look scattered with no fanning, indicating constant variance of errors. Due to the poisson nature of the response when analyzing our model results we exponentiate the results  in order to interpret the coefficients.
 
 ### Model
 
-Our final model is $$ log(flag) = \alpha_{ij1} + \alpha_{ij2} + \beta_j + log(duration)_{ij} $$ 
-where $ \lambda$ is the mean number of flags for day j of sleep
-$\alpha_i1$ is emoji skin tone of person i, fixed effect for day j
-$\alpha_i2$ is age of person i, fixed effect for day j
-$\beta_j$ is the customer id of the person, to account for problems with independence within the same wearer. for day j
+Our final model is $$ log(\lambda)_j = \beta_1\alpha_{1ij} + \beta_2\alpha_{2ij} + \gamma_{ij} + log(duration)_{ij} $$ 
+
+* how do i write this model? is there supposed to be an error term? *
+Where: 
+$ \lambda$ is the mean number of flags for day j of sleep
+$\alpha_{1ij}$ is the skin tone of person i on day j. This is a fixed effect. 
+$\alpha_{2ij}$ is the age of person i on day j. This is also a fixed effect. 
+$\gamma_{ij}$ is the customer id of person i on day j. This is a random effect added to account for the fact that flags for the same person will likely not be independent.
 $duration$ is offset by duration, to account for the different minutes of sleep people have, so they may have different rates of flags. 
 
 ### Results
 
-We perform individual t tests to check if the proportion of people being flagged is similar across skin color. The null hypothesis is that the mean number of flags for each group is the same. As the p value is -2e16, we reject the null hypothesis and determine that some groups get flagged more than others; skin tone does have an effect on false flags. 
+We perform individual t tests to check if the proportion of people being flagged is similar across skin color. The null hypothesis is that the mean number of flags for each group is the same. As the p value is $2.2e^{16}$, we reject the null hypothesis and determine that some groups get flagged more than others. That is, skin tone does have an effect on the number of flags a person gets. 
 ```{r,echo=FALSE}
 # Are the proportions of people being flagged  similar across race?
 prop.table(table(cust_full$emoji_modifier, cust_full$flags), 1)
@@ -132,8 +140,10 @@ chisq.test(cust_full$emoji_modifier, cust_full$flags)
 ```
 
 
-The following table shows the results of the regression with our chosen model. The table includes the point estimates, as well as the 95% Confidence interval range to account for variability in sampling. 
-We have set the lightest skin tone as the base factor level.  We see holding age constant, that the darker the subject's skin is, the more likely that they get over-flagged more than the lightest skin tone. STATE EXACT FOR MEDIUM AND DARK TONES HERE. We also see that the older one gets, the less liekly thet are to get over-flagged, holding skin tone constant. This holds even after accounting for the fact that observations for the same wearer are likely not independent. Thus according to the results MINGAR devices do have a problem with flagging darker skinned people. A secondary observation is that holding skin tone constant and accounting for duration of sleep and dependnece of observarions, age is also related to flags. 
+The following table shows the results of the regression with our chosen model. The table includes the point estimates, as well as the 95% confidence interval range to account for variability in sampling. 
+
+We have set the lightest skin tone as the base factor level.  We see holding age constant and accounting for the duration of sleep and dependence of observations within the same individual, that the darker the subject's skin is, the more likely that they get flagged.
+The mean number of flags for medium-light skinned people, medium skinned people, medium-dark skinned people, and dark skinned people are 2.173, 3.248, 6.624, and 10.913 times higher than the mean number of flags for light skinned people respectively. Thus according to the results MINGAR devices do have a problem with flagging darker skinned people. A secondary observation is that holding skin tone constant, the older one gets, the less likely they are to be flagged. The mean number of flags increases by a factor of 0.999 (or decreases by 0.06%)for each additional age.   
 
 ```{r}
 # par_table = cbind(est = summary(modrace2)$coef[,1],confint(modrace2))
@@ -141,16 +151,25 @@ We have set the lightest skin tone as the base factor level.  We see holding age
 #round(exp(par_table),3) %>% knitr::kable(caption = "table.")
 
 ```
-The following plot helps visualize the previous results. We see that the lightest skin tone mainly hangs around the low end of flags, with about 50% of people with 0 flags being in this skin tone. The proportion of people with a low number of flags decreases as the skin tone gets darker. We see that the two darkest skin tones get the largest proportion of the many flags per minute of sleep a night. We also see that people with the default emoji colour also hang around the lower end of the spectrum.
-```{r}
+The following plot helps visualize the previous results. We see that the lightest skin tone mainly hangs around the low end of the number of flags, with about 50% of people with 0 flags having this skin tone. The proportion of people with a low number of flags decreases as the skin tone gets darker. We see that the two darkest skin tones make up the largest proportion of people who get many quality flags a night. 
+```{r, echo = FALSE, fig.cap = "Proportion of People with flags by skin tone}
 ggplot(data = cust_full, aes(x = flags, fill = emoji_modifier)) +
   geom_bar(position = "fill") +
   scale_fill_grey() +
   theme_minimal() +
   labs(fill = "Skin Tone", x = "Flags", y = "Proportion")
 ```
+```{r, echo = FALSE}
+cust_full %>% 
+  ggplot(aes(x = flags, fill = emoji_modifier),position="fill") +
+  geom_bar(position = "fill") +
+  scale_fill_grey() +
+  theme_minimal() +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_brewer(palette = "Spectral", labels = c("Lightest", "Medium-Light", "Medium", "Medium-Dark", "Darkest"))
+```
 
-This plot shows the estimated relationship and confidence intervals between the log mean value of flags and the age of the person. The log of the y axis is taken due to the poisson nature of the response. Due to the negative slope, we see that the younger one is, the more likely to have a larger mean number of flags. Thus there is a negative relationship between these two variables, holding race cosntant. 
+This plot shows the estimated relationship between the log mean value of flags and the age of the person. The plot also shows the confidence intervals around the line. The log of the y axis is taken due to the poisson nature of the response. Due to the negative slope, we see that the younger one is, the more likely they are to have a larger mean number of flags. Thus there is a negative relationship between these two variables, holding skin tone constant. 
 
 ```{r, echo = FALSE}
 plot <- cust_full %>% group_by(age) %>% 
@@ -158,23 +177,12 @@ plot <- cust_full %>% group_by(age) %>%
             logmnflag = log(mnflag), n=n())
 ggplot(plot, aes(x=age, y=logmnflag)) +
   geom_point()+
-  geom_smooth(method = "loess", size = 1.5)+
+  geom_smooth(method = "loess", size = 1)+
   xlab("Age of the person") +
   ylab("Log of the empirical mean number of flags") +
   theme_minimal()
 ```
-The following table helps show the relationship between age and flags. We see that younger age groups tend to have a higher mean number of flags and rate of flags per minute of sleep. However, the variances for each age group are quite large, showing that there may be some inaccuracy in the relationship between the variables. 
-```{r}
-cust_full %>%
-    group_by(age_group) %>%
-    dplyr::summarize(MeanCount = mean(flags, na.rm=TRUE),
-              VarCount = var(flags, na.rm=TRUE),
-              MeanRate = mean(flags/duration, na.rm=TRUE),
-              VarRate = var(flags/duration, na.rm=TRUE),
-              n = n()) %>% 
-  knitr::kable(booktabs=T, 
-        caption = 'The mean and variance of flags in slap by skin tone emoji.')
-```
+
 
 
 ## Informative title for section addressing a research question
@@ -189,15 +197,23 @@ cust_full %>%
 _In this section you will summarize your findings across all the research questions and discuss the strengths and limitations of your work. It doesn't have to be long, but keep in mind that often people will just skim the intro and the discussion of a document like this, so make sure it is useful as a semi-standalone section (doesn't have to be completely standalone like the executive summary)._
 
 ### Findings
-For the question on device faultiness relating to skin tones, we have confirmed that the reports were correct. MINGAR devices are fare more likely to flag an individual the darker their skin is, provided that age stays constant. We find that light-medium, medium, dark-medium and dark are ..., ..., ..., ..., more likely to be flagged during sleep than the lightest skin tone, accounting for duration of sleep and age staying constant. We have also found that the age of the individual affects the flag of the device, with an increasing in age making it .., more likely that theyr'e flagged, skin tone staying constant. 
+
+For the question on the relationship between sleep scores and skin tones, we have confirmed that the reports were correct. MINGAR devices are far more likely to flag an individual the darker their skin is, provided that age stays constant.
+We find that the average number of flags during sleep for medium-light, medium, medium-dark, and dark skinned people are 2.173, 3.248, 6.624, and 10.913 times higher than the mean number of flags for light skinned people respectively. This accounts for the duration of sleep, and age staying constant. We have also found that the age of the individual affects the mean number of flags they get, with the mean number of flags increasing by a factor of 0.999 (or decreases by 0.06%) for each additional age, skin tone held constant. 
 
 ### Strengths and limitations
 There were several limitations when analyzing the information on skin tones and flags. 
-The first major limitation is that the NA values (default emoji) was not accurate to the actual skin tone of the individual. As their true skin tone was not recorded, these indoviduals were dropped from the model, and analysis created is most likely biases as we dropped a large number of the observations, and we do not knwo the true relationshi between skin tones and flags. Another limitation is that it is possible that the skin tone emoji a person uses is not their actual skin tone. As it is impossible to verify as a race variable was not included, the anakysis may be biased as we do not get the true relationship between skin tone and flags.
-Another limitation is that while the mean and median of the flag variable for each skin tone was close, they were not very close. Thus this may violate the assumption of modelling that mean most always be equal to variance. this means that there may be overdispersion of coefficeints (coefficients reported are larger than their true variable).We also dropped all observations in which sex was missing. This could cause bias in the model if the missing variables were not randomly distributed. 
+The first major limitation is that the missing values (default skin tone emoji) was not accurate to the actual skin tone of the individual. As their true skin tone was not recorded, these individuals were dropped from the model, and analysis created is most likely biased as we dropped a large number of the observations. This means that  we do not know the true relationship between skin tones and sleep scores.
 
-The goodness of fit doesnt fit well? why is this? (check textbook chapter).
-Postcode measures are not perfectly comparable for a single person, but gives the general area of the wealthj in that neighbourhood
+Another limitation is that it is possible that the skin tone emoji a person uses is not their actual skin tone. As it is impossible to verify as a race variable was not included, the analysis may be biased as we do not get the true relationship between skin tone and flags.
+
+Another limitation is that while the mean and median flags for each skin tone was close, they were not very close. This may violate the poisson assumption  that mean most always be equal to variance. This means that there may be overdispersion of coefficients (coefficients reported are larger than their true variable).
+
+We also dropped all observations in which sex was missing. This could cause bias in the model if the missing variables were not randomly distributed. 
+
+A main assumption for the type of model used is that the random effects need to come from a normal distribution. However as our random effects was the customer id, which is unique to each customer,the distribution is uniform. Thus our estimates are likely biased. 
+
+* Postcode measures are not perfectly comparable for a single person, but gives the general area of the wealthj in that neighbourhood *
 
 \newpage
 
@@ -210,21 +226,21 @@ Postcode measures are not perfectly comparable for a single person, but gives th
 
 **Pablo Mercado**. Statsy is a senior consultant with Eminence Analytics. She specializes in data visualization. Statsy earned her Bachelor of Science, Specialist in Statistics Methods and Practice, from the University of Toronto in 2023.
 
-**Olaedo Okpareke**. Olaedo Okpareke is a senior consultant at Arpesso Analytics. She specializes in statistical anaylsis and data visualization in R and Python. Olaedo also specializes in statstical surveys and sampling, as well as financial risk analysis. Olaedo earned her Bachelor od Science in Economics and Statistics from the University of Toronto in 2023, and her masters in Economics Data analysis from University of Toronto in 2026. 
+**Olaedo Okpareke**. Olaedo Okpareke is a senior consultant at Arpesso Analytics. She specializes in statistical analysis and data visualization in R and Python. She also specializes in statistical surveys and sampling, as well as financial risk analysis. Olaedo earned her Bachelor of Science in Economics and Statistics from the University of Toronto in 2023, and her masters in Economic Data analysis from University of Toronto in 2026. 
 
-**Walid Roudani**. Walid Roudani is a senior consultant with Apresso Analytics. He specializes in reproducible analysis, statistical communication, as well as team organization. Walid has earned both his Bachelor of Science in Economics and Statistics from the University of Toronto in 2023, as well as his masters degree in Economics at the University of Toronto in 2026.
+**Walid Roudani**. Walid Roudani is a senior consultant with Arpesso Analytics. He specializes in reproducible analysis, statistical communication, as well as team organization. Walid has earned both his Bachelor of Science in Economics and Statistics from the University of Toronto in 2023, as well as his masters degree in Economics at the University of Toronto in 2026.
 
 ## Code of ethical conduct
 
-In our report, we represented all summaries and visualizations honestly. We did not create any misleading visualizations. When modifcations to variables were made, they were very explicitly stated and justified. We stated clearly all limitations of the analysis, and any failings of the data or our method. 
+In our report, we represented all summaries and visualizations honestly. We did not create any misleading visualizations. When modifications to variables were made, they were very explicitly stated and justified. We stated clearly all limitations of the analysis, and any failings of our method. 
 
-We did not disclose any personal customer information from MINGAR to any third party, as disclosed by the Non-disclosure agreement. ALl confidential information was analyzed solely by the statistic consultants for the report at Arpesso. As no consent was given by MINGAR to spread the customer information, and was not durected by the court of law, the information was kept confidential. 
+We did not disclose any personal customer information from MINGAR to any third party, as disclosed by the Non-disclosure agreement. All confidential information was analyzed solely by the statistic consultants for the report at Arpesso. As no consent was given by MINGAR to spread the customer information, and was not directed by the court of law, the information was kept confidential. 
 
-In preparing the report, Arpesso remained objective with handling of the data, and did not modify any variables or give false reuslts to uphold personal biases. The statistical procedures used to create the data was done based on the data itself and not on personal decisions.
+In preparing the report, Arpesso remained objective with handling of the data, and did not modify any variables or give false results to uphold personal biases. The statistical procedures used to create the data was done based on the data itself and not on personal decisions.
 
-While scraping the data required for our report, we made sure to uphold the rights of the owner by providing a user agent string for further enquiries and so that our requests are made clear. We scraped the data at a timely rate, and also made sure to not pass the data off as our own, and to crape to create new datasets from the data, and not to duplicate it. 
+While scraping the data required for our report, we made sure to uphold the rights of the owner by providing a user agent string for further inquiries, and so that our requests are made clear. We scraped the data at a timely rate, made sure to not pass the data off as our own, and scraped to create new datasets from the data, not to duplicate it. 
 
-All sensitive customer information was kept anonymized. Arpesso did not attemot to use the infrmation to identify individuals. To uphold customer's proivacy, All personal informationwas used solely for the purpose of analysis and no non-essential identifying information was used.
+All sensitive customer information was kept anonymized. Arpesso did not attempt to use the information to identify individuals. To uphold customer's privacy, all personal information was used solely for the purpose of analysis and no non-essential identifying information was used.
 
 \newpage
 # References
@@ -266,6 +282,7 @@ All sensitive customer information was kept anonymized. Arpesso did not attemot 
 11. Fitness Tracker Info Hub (2022). https://fitnesstrackerinfohub.netlify.app/
 
 12. Unicode.org (2022). https://unicode.org/emoji/charts/full-emoji-modifiers.html
+
 _You don't need to cite course materials, but consider all the the places you got data from, as well as the packages used and R itself. These are all things you should consider citing. Likewise, you might use some external resources on the emoji skin tones/Fitzpatrick scale, etc._
 
 \newpage
@@ -273,6 +290,19 @@ _You don't need to cite course materials, but consider all the the places you go
 
 Appendix should have the tables which support was was said in the main body. 
 _These appendices should outline in more detail the steps taken to access the following datasets. They should NOT include code, but should briefly describe the steps and important considerations. I.e., show that you understand what needs to be considered when web scraping, protecting licensed data, etc._
+
+The following table helps show the relationship between an individual's age and the flags they got. We see that younger age groups tend to have a higher mean number of flags and rate of flags per minute of sleep. However, the variances for each age group are quite large, showing that there may be some inaccuracy in the relationship between the variables. 
+```{r, echo = FALSE}
+cust_full %>%
+    group_by(age_group) %>%
+    dplyr::summarize(MeanCount = mean(flags, na.rm=TRUE),
+              VarCount = var(flags, na.rm=TRUE),
+              MeanRate = mean(flags/duration, na.rm=TRUE),
+              VarRate = var(flags/duration, na.rm=TRUE),
+              n = n()) %>% 
+  knitr::kable(booktabs=T, 
+        caption = 'The mean and variance of flags in slap by skin tone emoji.')
+```
 
 ## Web scraping industry data on fitness tracker devices
 

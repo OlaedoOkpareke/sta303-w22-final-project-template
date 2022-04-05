@@ -157,6 +157,18 @@ cust_full = cust_full %>%
              age <= 100 ~ "80 or more",
              TRUE ~ "None"
              ))
+cust_full = cust_full %>%
+  filter(!is.na(emoji_modifier))
+
+cust_full = cust_full %>%
+  mutate(emoji_modifier = case_when (
+    emoji_modifier == "U+1F3FB" ~ "Lightest",
+    emoji_modifier == "U+1F3FC" ~ "Medium-Light",
+    emoji_modifier == "U+1F3FD" ~ "Medium",
+    emoji_modifier == "U+1F3FE" ~ "medium-Dark",
+    emoji_modifier == "U+1F3FF" ~ "Darkest",
+    TRUE ~ "None"
+  ))
 ```
 
 # Loading client data
@@ -218,8 +230,6 @@ summary(modrace2)
 
 
 ```{r}
-anova(modrace2, modrace, test="Chisq")
-
 lmtest::lrtest(modrace2, modrace)
 ```
 
