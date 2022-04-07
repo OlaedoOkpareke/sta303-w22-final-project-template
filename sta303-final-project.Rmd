@@ -1,6 +1,6 @@
 ---
 title: "Report on MINGAR Customers and Device Functionability"
-subtitle: "MINGAR devices over-flag darker skin tones, marketing results here"
+subtitle: "MINGAR devices Over-Flag Darker Skin People, Newer Affordable Devices are More Popular Among Lower Income People"
 author: "Report prepared for MINGAR by Arpesso"
 date: 2022-04-07
 lang: "en"
@@ -17,6 +17,9 @@ titlepage-rule-height: 2
 ---
 
 ```{r, message = FALSE, echo=FALSE}
+# install.packages("eeptools")
+# install.packages("cancensus")
+# install.packages("haven")
 library(tidyverse)
 library(lme4)
 library(rvest)
@@ -27,43 +30,21 @@ library(gridExtra)
 library(knitr)
 library(lattice)
 # this should suppress all code and messages
-knitr::opts_chunk$set(include=FALSE)
+# knitr::opts_chunk$set(include=FALSE)
 ```
 
-
-_The cover page must be a single stand alone page and have:_
-
-*	_A title and subtitle (that indicate your findings)_
-* _"Report prepared for MINGAR by" your company name_
-*	_Date (assessment submission date is fine)_
-
-_You can change the colour of this cover to any colour you would like by replacing 6C3082 in the YAML above (`titlepage-color:`) to another hex code. You could use this tool to help you:_ https://htmlcolorcodes.com/color-picker/
-
-_Note: There should NOT be a table of contents on the cover page. It should look like a cover._
 
 \newpage
 # Executive summary
 
-_Guidelines for the executive summary:_
-
-* _No more than two pages_
-* _Language is appropriate for a non-technical audience_
-* _Bullet points are used where appropriate_
-*	_A small number of key visualizations and/or tables are included_
-*	_All research questions are addressed_
-
-
-_The [module 4 writing prompt](https://sta303-bolton.github.io/sta303-w22-courseguide/knowledge-basket-writing-and-peer-feedback.html#module-4-writing-task) provides some tips and information about writing executive summaries._
-
 ## Background & Aim
 
-In order to understand the aim of the study conducted by our company ARPESSO, it is crucial to state the background and express what we already know about the study. MINGAR has received complaints about the fact that their devices have not been working properly for individuals with darker skins with respect to sleep scores.Therefore, the purpose of our company’s study consists of investigating whether the different MINGAR lines of devices were discriminatory against particular skin tones with respect to these sleep scores. 
-
-To investigate these claims, we use a measure of the devices’ performance called flags, which is given a rate by the minutes of sleep. A higher quantity of flags per minute of sleep insinuates a worse performance of device used during the sleep, which in turn means poor sleep score reliability. More precisely, our social media team took on the task of answering the research question “how does the number of flags per minute of sleep differ for users with darker skin compared to those with lighter skin?”. We find that individuals with darker skin tones have a higher flag count per minute, therefore a worse sleep score, than users with lighter skin tones. 
+MINGAR has received complaints about the fact that their devices have not been working properly for individuals with darker skins with respect to sleep scores. Therefore, the study investigates whether the different MINGAR lines of devices were discriminatory against particular skin tones with respect to these sleep scores. 
+We use a measure of the devices’ performance called flags, which is given a rate by the minutes of sleep. A higher quantity of flags per minute of sleep insinuates a worse performance of device used during the sleep, which in turn means poor sleep score reliability. We find that individuals with darker skin tones have a higher flag count per minute, therefore a worse sleep score, than users with lighter skin tones. 
 
 ## Key findings
 
-* From Table 1, we estimate that on average, the count of flags per minute grows as we darken the skin tone. The confidence interval, which is the range of plausible values the mean number of flags can take, confirms this. Therefore, we observe significant differences between skin tones in MINGAR’s device sleep performance. 
+* From Table 1, we estimate that on average, the number of flags per minute grows as we darken the skin tone. The confidence interval, which is the range of plausible values the mean number of flags can take, confirms this. Therefore, we observe significant differences between skin tones in MINGAR’s device sleep performance. 
 
 * The mean number of flags per minute of sleep for the medium-light skin tone is 2.173 times as high compared to the lightest skin tone. It is plausible that the mean number of flags can be as high as times 2.26 higher compared to the lightest skin tone. 
 
@@ -72,9 +53,6 @@ To investigate these claims, we use a measure of the devices’ performance call
 * The mean number of flags per minute of sleep for the medium-dark skin tone is 6.62 times as high compared to the lightest skin tone. It is plausible that the mean number of flags can be as high as 6.86 times higher compared to the lightest skin tone.
 
 * The mean number of flags per minute of sleep for the darkest skin tone is 10.913 times as high compared to the lightest skin tone. It is plausible that the mean number of flags can be as high as 11.29 times higher compared to the lightest skin tone.
-
-
-* Moreover, we observe from the same table that the number of flags per minute not only grows as we make the skin tone darker, but also grows at an increasing rate. This means that the darker a skin gets, the worse the sleep score becomes relative to the previous skin tone. This highlights MINGAR’s ethnicity issue even more. 
 
 * Looking at Figure 1, we observe that the proportion of dark-skin users impacted by the device’s performance increases as the number of flags increases. For instance, we see that dark-skin users make up almost the entirety of MINGAR users who have between 15 and 26 flags during their sleep, while they make up close to 0% of MINGAR users who have between 0 and 4 flags.
 
@@ -87,6 +65,7 @@ To investigate these claims, we use a measure of the devices’ performance call
 * Finally, ARPESSO consultants also encountered a slight overdispersion in the data. This is a situation whereby the variance of a dataset is higher than its mean, resulting in a variability that is greater than expected.
 
 ```{r,echo=FALSE}
+socialmedia_data <- read_csv("data/socialmedia_data", show_col_types = FALSE)
 #table 1:
 
 Variable <- c("Intercept", "Medium-Light Skin Tone", "Medium Skin Tone", "Medium-Dark Skin Tone", "Dark Skin Tone", "Age")
@@ -118,7 +97,7 @@ ggplot(data = socialmedia_data, aes(x = flags, fill = emoji_modifier)) +
 _Provide a brief introduction to your report and outline what the report will cover. This section is valuable for setting scope and expectations. _
 
 MINGAR has requested information from Arpesso on the functionality of their devices, as well as the new customer base. In this technical report we investigate the claim that MINGAR devices are more faulty on dark skin, that is, flag dark skin more than light skin. We also perform analysis to find the characteristics of the customers most likely to purchase new MINGAR products. We do this with the use of tabular and graphical summaries, as well as generalized linear mixed models.
-
+In this report i will...
 ### Research questions
 
 * What are the differences between customers that are buying affordable fitness trackers/smart watches and those that are not?
@@ -137,16 +116,13 @@ In this report we create a model to find the relationship between the sleep scor
 Our variable of interest is the number of flags during a night of sleep for each person. We see that the distribution of this variable is approximately poisson as it is right skewed with many values at 0. From the figure below it appears that people with darker skin tones get more quality flags during sleep than people of lighter skin tones. There are also many people whose true skin tone is not recorded.
 
 ```{r, echo = FALSE, fig.cap = "Distribution of sleep disruption flags by skin tone"}
-socialmedia_data <- read_csv("data/socialmedia_data", show_col_types = FALSE)
-
 socialmedia_data %>%
   ggplot(data =., aes(x=flags, fill = emoji_modifier)) +
   geom_histogram()+ 
   theme_minimal() +
   labs(x = "Flags",
        y = "Count",
-       fill = "Skin Tone") +
-  scale_fill_brewer(palette = "Set1", labels = c("Lightest", "Medium-Light", "Medium", "Medium-Dark", "Darkest"))
+       fill = "Skin Tone") 
 ```
 
 The following table shows the summary on number of flags for all wearers of the devices over the several nights. The count is the number of times that flags happened per night, and the rate is the number of flags per minute of sleep. We see that the mean and variance of both counts and rates for darker skinned people tends to be larger than lighter skinned people. This indicates that MINGAR might have a problem with darker skinned people getting flagged more often. As the mean and variance are close for the most part, we can assume that this assumption for the poisson distribution is satisfied.  
@@ -195,26 +171,30 @@ The maximum likelihood ratio test runs under the null hypothesis that the two mo
 
 Additionally, 95% confidence intervals for each coefficient are created and also exponentiated, where the upper and lower bound of the interval will be obtained. This means we are 95% confident that this interval obtained for the sampled being used captures the true coefficient estimates. The reason we create these intervals is to give us a range of plausible coefficient values as opposed to just the single estimate we originally had. We compare our single estimates to the intervals to see how reasonable the values we obtained for the coefficients actually were.
 
-Our final model is $$ log(\lambda)_j = \beta_1\alpha_{1ij} + \beta_2\alpha_{2ij} + \gamma_{ij} + log(duration)_{ij} $$ 
+Our final model is $$ log(\lambda)_j = \beta_0 + \beta_1\alpha_{1ij} + \beta_2\alpha_{2ij} + \gamma_{ij} + log(duration)_{ij} $$ 
 
 *how do i write this model? is there supposed to be an error term?*
-Where: 
-$ \lambda$ is the mean number of flags for day j of sleep
-$\alpha_{1ij}$ is the skin tone of person i on day j. This is a fixed effect. 
-$\alpha_{2ij}$ is the age of person i on day j. This is also a fixed effect. 
-$\gamma_{ij}$ is the customer id of person i on day j. This is a random effect added to account for the fact that flags for the same person will likely not be independent.
-$duration$ is offset by duration, to account for the different minutes of sleep people have, so they may have different rates of flags. 
+Where:
 
-As our model if of the generalized linear mixed nature, we need to make sure it satisfied both the poisson model and generalized linear mixed model assumptions.We previously confirmed the assumptions from the graph and table that the sleep flags are of the poisson distribution. We assume that the people who purchased the sleep tracking devices made the decision independently, that is, our subjects are independent. As the different flags that each subject gets are likely not independent, we use a random effect to account for the violation of independence. We assume that the residual errors come from a normal distribution and have a constant variance, proven by the residual plot. As we have shown that the flag distribution is poisson, we assume that the log link used to link this response to the explanatory variables is correct. However, we cannot assume that our random effect is normal.
+y_ij tilda pois(lambda)
+* $\lambda$ is the mean number of flags for day j of sleep
+
+* $\alpha_{1ij}$ is the skin tone of person day j. This is a fixed effect. 
+
+* $\alpha_{2ij}$ is the age of person on day j. This is also a fixed effect.
+
+* $\gamma_{ij}$ is the customer id of person i on day j. This is a random effect added to account for the fact that flags for the same person will likely not be independent.
+
+* $duration$ i and j is offset by duration, to account for the different minutes of sleep people have, so they may have different rates of flags. 
+
+As our model is of the generalized linear mixed nature, we need to make sure it satisfied both the poisson model and generalized linear mixed model assumptions.We previously confirmed the assumptions from the graph and table that the sleep flags are of the poisson distribution. We assume that the people who purchased the sleep tracking devices made the decision independently, that is, our subjects are independent. As the different flags that each subject gets are likely not independent, we use a random effect to account for the violation of independence. We assume that the residual errors come from a normal distribution and have a constant variance, proven by the residual plot. As we have shown that the flag distribution is poisson, we assume that the log link used to link this response to the explanatory variables is correct. However, we cannot assume that our random effect is normal.
 
 ### Results
 
 We perform a non-parametric test to check if the proportion of people being flagged is similar across skin color. The null hypothesis is that the mean number of flags for each group is the same. If this were true, then skin color does not have an effect on the mean number of flags. However as s the p value is $2.2e^{-16}$, we reject the null hypothesis and determine that some groups get flagged more than others. That is, skin tone does have an effect on the number of flags a person gets. 
 
-```{r,echo=FALSE}
+```{r,include=FALSE}
 # Are the proportions of people being flagged similar across race?
-prop.table(table(socialmedia_data$emoji_modifier, socialmedia_data$flags), 1)
-chisq.test(socialmedia_data$emoji_modifier, socialmedia_data$flags)
 
 kruskal.test(flags ~ emoji_modifier, data = socialmedia_data)
 ```
@@ -228,7 +208,7 @@ The mean number of flags for medium-light skinned people, medium skinned people,
 A secondary observation is that holding skin tone constant, the older one gets, the less likely they are to be flagged. The mean number of flags increases by a factor of 0.999 (or decreases by 0.06%)for each additional age. *interpret this correctly now that I've scaled age!*
 
 
-```{r,cache = TRUE, include = FALSE}
+```{r,cache = TRUE, include = FALSE,eval=FALSE}
 confidence = confint(modrace2)
 # estimates
 ests <- format(round(exp(summary(modrace2)$coeff)[,1], 3), nsmall = 2)
@@ -247,7 +227,7 @@ rownames_for_table <- c("Intercept", "Dark Skin Tone", "Medium Skin Tone", "Medi
 colnames_for_table <- c("Estimate", "95% Confidence Interval")
 ```
 
-```{r, echo = FALSE}
+```{r, echo = FALSE,eval=FALSE}
 table <- cbind(ests, cis_pretty)
 rownames(table) <- rownames_for_table
 colnames(table) <- colnames_for_table
@@ -264,16 +244,6 @@ ggplot(data = socialmedia_data, aes(x = flags, fill = emoji_modifier)) +
   scale_fill_grey() +
   theme_minimal() +
   labs(fill = "Skin Tone", x = "Flags", y = "Proportion")
-```
-
-```{r, echo = FALSE}
-socialmedia_data %>% 
-  ggplot(aes(x = flags, fill = emoji_modifier),position="fill") +
-  geom_bar(position = "fill") +
-  scale_fill_grey() +
-  theme_minimal() +
-  scale_y_continuous(labels = scales::percent) +
-  scale_fill_brewer(palette = "Spectral", labels = c("Lightest", "Medium-Light", "Medium", "Medium-Dark", "Darkest"))
 ```
 
 This plot shows the estimated relationship between the log mean value of flags and the age of the person. The plot also shows the confidence intervals around the line. The log of the y axis is taken due to the poisson nature of the response. Due to the negative slope, we see that the younger one is, the more likely they are to have a larger mean number of flags. Thus there is a negative relationship between these two variables, holding skin tone constant. 
@@ -369,17 +339,18 @@ grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=2)
 ```
 
 ### Methods
+*state datasets that were merged*
 
-A generalized linear mixed model was created. The model will use a variety of customer-level variables as explanatory variables in order to predict whether a consumer will by a fitness tracker that is affordable or not.  As our response is of the binomial family, our generalized linear model will use a logit link function, and thus the model will tell us about the relationship between our predictor variables and the mean of the Affordable response variable. 
+A generalized linear mixed model was created. The model will use a variety of customer-level variables as explanatory variables in order to predict whether a consumer will by a fitness tracker that is affordable or not.  As our response variable only contains observations of "True" or "False", it is of the binomial family. Thus our generalized linear model will use a logit link function, and thus the model will tell us about the relationship between our predictor variables and the Affordable response variable. We have a random effect we need to account for, which is the postal code, as purchasing patterns for people in the same postal code may be similar depending on if the area is lower or higher income. Since we would like to make claims about the entire population of customers as opposed to just those in our sample, we must use the different customers in our sample as random effects since each person differs. Thus, our model needs to be a generalized linear mixed model.  
 
-As our model is a mixed model, the model must include random effects in its parameters in addition to the typical fixed effects. The random variable used as the random effect will be postal code, as purchasing patterns for people in the same postal code may be similar depending on if the area is lower or higher income. Since we would like to make claims about the entire population of customers as opposed to just those in our sample, we must use the different customers in our sample as random effects since each person differs. Doing so would allow us to successfully make predictions about other customers based on their respected values or properties for the predictor variables and fixed effects.
 
 With this in mind, our model will be of the following form:
 
 $Y_i = Bernoulli(\rho_i)$
-$logit(\rho_i) = \mu + X_{i}\beta + U_i$
+$logit(\rho_i) = \beta_0 + X_{i}\beta + U_i$
 $U_i$ ~ $N(0, \sigma^2)$, where:
 
+beta 0 is intercept, when age is 0 and income is poor
 * _$Y_i$ is whether a customer i, purchases a Affordable fitness tracker or not_
 * _$X_i$ are the indicator variables for the fixed effect_ 
 * _$\beta$ is the coefficient matrix for the fixed effects_
@@ -388,16 +359,13 @@ $U_i$ ~ $N(0, \sigma^2)$, where:
 
 Each of our units and customers are independent from each other and should have no effect on each others answers and values, satisfying the independence assumption. Additionally, our chosen link function is correct as "Affordable" is most clearly a binary variable with a Bernoulli distribution as it can only either be True or False, satisfying another assumption.  The residual errors look binomial, so we can assume that the variance is binomial. However, our random effect is not of the normal distribution. 
 
-We then determine which predictor variables will be included as the fixed effects. If a certain variable is used as a fixed effect in the model, it shows that the different values or categorical responses of said variable play a factor in whether the consumer will buy affordable products or not, and thus we will discover how the two groups of consumers vary.
-
-To determine which variables affect whether a customer buys affordable fitness trackers, different models will be tested against each other. The test used to compare models is a restricted maximum likelihood ratio test (REML), which estimates random effects based on the fixed effects. This REML test has been chosen since we are comparing models with the same random effect (postal codes), and the assumptions for normality and independence aren't held. The REML test will be run under the null hypothesis that the two models being compared fit our data equally as good as each other. We then obtain a p-value that provides us with evidence either for or against this null hypothesis. A smaller p-value below 0.05 (our significance level) means there is evidence against the null hypothesis, meaning the simpler model does not explain the data as well as the more complex model, making the larger model better. 
+To determine which variables affect whether a customer buys affordable fitness trackers, different models will be tested against each other. The test used to compare models is a restricted maximum likelihood ratio test (REML), which estimates random effects based on the fixed effects. This REML test has been chosen since we are comparing models with the same random effect (postal codes), and the assumptions for normality and independence aren't held. The REML test will be run under the null hypothesis that the two models being compared fit our data equally as good as each other. A smaller p-value below 0.05 (our significance level) means there is evidence against the null hypothesis, meaning the simpler model does not explain the data as well as the more complex model, making the larger model better. 
 
 Our age variable was created by subtracting the date of birth of the individual from the date of analysis. Income class was created by getting the census data and postal code data, getting the mean income from the postcode, and then segmenting these values into three different groups.  Income class is a categorical variable that can be either lower, middle, or upper class based on the average median household income of all individuals in the same postcode. This gives us an idea of the financial situation of a customer, and how wealthy they are based on where they live. 
 
-The coefficients of our variable tell us the log-odds ratio of each indicator variable, but they can be converted into just the odds ratio, which is more easily interpretable, by exponentiation them. For the intercept, the odds ratio will tell us the odds of a customer buying an affordable product when all fixed effects are equal to 0. For the categorical fixed effects, their odds ratio will explain how much the odds of a customer buying an affordable product increases or decreases for the given factor of that categorical variable. For the numerical fixed effects, their odds ratio tells us how much the odds of a customer buying an affordable product increases or decreases when the value of the variable increases by 1 unit.Additionally, 95% confidence intervals for each coefficient will be created and also exponentiated, where the upper and lower bound of the interval will be obtained. This means we are 95% confident that this interval obtained for the sampled being used captures the true coefficient estimates. The reason we create these intervals is to give us a range of plausible coefficient values as opposed to just the single estimate we originally had. We can also compare our single estimates to the intervals to see how reasonable the values we obtained for the coefficients actually were.
+The coefficients of our variable are exponentiated into the odds ratio, to be interpretable. Additionally,the 95% confidence intervals for each coefficient will be created and also exponentiated, where the upper and lower bound of the interval will be obtained. The reason we create these intervals is to give us a range of plausible coefficient values as opposed to just the single estimate we originally had. We can also compare our single estimates to the intervals to see how reasonable the values we obtained for the coefficients actually were.
 
-
-### Model 
+Our age variable was created by subtracting the date of birth of the individual from the date of analysis. Income class was created by getting the census data and postal code data, getting the mean income from the postcode, and then segmenting these values into three different groups.  Income class is a categorical variable that can be either lower, middle, or upper class based on the average median household income of all individuals in the same postcode. This gives us an idea of the financial situation of a customer, and how wealthy they are based on where they live.  
 
 ```{r, cache=TRUE, warning=FALSE, include = FALSE}
 market_model1 = glmer(affordable ~ factor(income_class) + (1 | postcode),
@@ -414,13 +382,11 @@ lrtest(market_model2,market_model3)
 summary(market_model2)
 ```
 
-In the creation of the model, the first fixed effect added was income class. We added the age variable for the second model, and compared the two models. Testing the model gave a very low p-value  of $5.656*10^{-9}$. Thus there is evidence against the null hypothesis that the simpler model without age fits the data as well as the model with age, meaning age and income should be included in the model as it affects a customers fitness tracker purchasing decisions. Another model was created,adding the variable sex to the model. The model was tested against the simpler Income Class and Age model. The test outputted a p-value of 0.2059. Thus there is no evidence against the null hypothesis stating the simpler models without sex explain the data just as well as the data including sex. 
-
-So, we now have finalized our final model and the fixed effects used within it. The only fixed effects used in the model are the variables income class and age. This tells us that only the income class and age of customers affects whether the customer will buy an affordable fitness tracker or a non-affordable one.
+In the creation of the model, the first fixed effect added was income class. We added the age variable for the second model, and compared the two models. Testing the model gave a very low p-value  of $5.656*10^{-9}$. Thus there is evidence against the null hypothesis that the simpler model without age fits the data as well as the model with age, meaning age and income should be included in the model as it affects a customers fitness tracker purchasing decisions. Another model was created,adding the variable sex to the model. The model was tested against the simpler Income Class and Age model. The test outputted a p-value of 0.2059. Thus there is no evidence against the null hypothesis stating the simpler models without sex explain the data just as well as the data including sex. So in our final model, the fixed effects are income class and age, while the random effect is the postcode. 
 
 ## Results 
 
-We perform a non-parametric test to check if the proportion of people buying new devices are is similar across income class. The null hypothesis is that the likelihood of buying the newer devices across the groups is the same. If this were true, then income does not have an effect on purchasing the devices. However as the p value is $2.2e^{-16}$, we reject the null hypothesis and determine that some groups are more likely to buy the devices than others. 
+We perform a kruskal-wallis non-parametric test to check if the proportion of people buying new devices are is similar across income class. The null hypothesis is that the likelihood of buying the newer devices across the groups is the same. If this were true, then income does not have an effect on purchasing the devices. However as the p value is $2.2e^{-16}$, we reject the null hypothesis and determine that some groups are more likely to buy the devices than others. 
 
 ```{r,include=FALSE}
 # Are the proportions of people being flagged similar across race?
@@ -429,14 +395,14 @@ kruskal.test(affordable ~ factor(income_class), data = marketing_data)
 ```
 Below, a table can be seen containing the exponentiated estimated coefficients and confidence intervals for each fixed effect, as well as the intercept values when all fixed effects are equal to zero. As our confidence intervals are narrow, our estimates are precise. 
 
-```{r, cache=TRUE}
+```{r, cache=TRUE,eval=FALSE}
 confint <- confint(market_model2)
 
 exp_coef <- exp(summary(market_model2)$coeff[,1])
 exp_confint <- exp(confint(market_model2))
 ```
 
-```{r, message=FALSE, warning=FALSE, include = TRUE, echo = FALSE}
+```{r, message=FALSE, warning=FALSE, include = TRUE, echo = FALSE,eval=FALSE}
 cis_pretty <- str_c("(", trimws(round(exp_confint[2:5,1], 3)), ", ", round(exp_confint[2:5,2],3), ")")
 
 market_table <- cbind(round(exp_coef,3), cis_pretty)
@@ -463,6 +429,7 @@ ggplot(data = marketing_data, aes(x = factor(income_class), fill = affordable)) 
   labs(fill = "Owns New Device", x = "Income class", y = "Proportion")
 ```
 
+
 This plot shows the estimated relationship between the log mean value of the decision to buy the newer affordable products, and the age of the person. The plot also shows the confidence intervals around the line, as well as segments by income class. The log of the y axis is taken due to the bernoulli nature of the response. Due to the positive slope, we see that the older one is, the more likely they are to purchase the new affordable devices. We also see that the slope for the lower class customers is higher than those of the middle class and upper class customers. Thus there is a positive relationship between age and the decision to buy newer products, and poorer customers are more likely to purchase newer products. 
 
 ```{r,echo=FALSE, fig.cap = "Mean value of the Purchase decision by Age, grouped by Income Class" }
@@ -474,7 +441,10 @@ emplogit2 <- marketing_data %>%
 ggplot(emplogit2, aes(x = age, y = emplogit, color = income_class)) +
   geom_point(aes(shape = income_class)) +
   geom_smooth(aes(linetype = income_class), method = "lm") +
-  xlab("Age") + ylab("Empirical logits")
+  labs(x = "Age",
+       y = "Empirical logits",
+       color = "Income Class") +
+  theme_minimal() 
 ```
 
 
@@ -492,7 +462,10 @@ We find that the average number of flags during sleep for medium-light, medium, 
 
 The major strengths of the customer characteristics model and analysis is the versatility and information this model provides on consumer behavior and consumption. Mainly, we know that lower income families have much greater odds to purchase more affordable smart watches than middle class and upper class families, and that older people will have higher odds to buy affordable smart watches. So, the marketing team of Mingar can shift their focus and advertising more to that market in regards to the affordable lines of 'active' and 'advance.' 
 
-A limitation of this analysis is that we used only observations that were complete in all variables of interest. Specifically, we dropped all the cases where they did not respond in when questioned on their sex or pronouns. These changes reduced our sample, which could possible introduce some bias to our model. 
+The strengths of the skin tone model include the fact that we used a random effect of the individual to account for that fact that observations were likely not independent for each individual. This helps us to generalize our results for the population, and not just this specific sample. We also decided to add an offset of duration, which accounts for the fact that rates of flags for each night could be different. This helps show the true relationship between skin tone and quality flags. Another strength includes the rationale for the model, which used the poisson distribution and not the normal distribution, to match with the response. A final strength is only including biological characteristics for the customers, as the sleep trackers work off of biological qualities such as skin tone. 
+*put strengths for skin tone*
+
+A limitation of this analysis is that we used only observations that were complete in all variables of interest. Specifically, we dropped all the cases where they did not respond in when questioned on their sex or pronouns. These changes reduced our sample, which could possible introduce some bias to our model. If the missing values were not randomly distributed, this could also lead to bias. In future work we could try to collect better data on this variable.  
 
 Another limitation our model suffers from is from how we defined some of our variables used in the model. For example, we defined income classes based of the percentiles within the data rather than following a standard, like the Canadian Tax bracket, because the ranges of these classifications tend to make all observations heavily lean towards only one factor of the bracket. Many of these brackets cite that `$`50 000 to `$`100 000 as one factor, but that range contains over 98% of the observations.
 
@@ -500,7 +473,7 @@ Another limitation is when it comes to defining the household median income. Mos
 
 Another limitation is that we assumed those who lived in lower income neighbourhoods were lower income and those that lived in higher income neighbourhoods are higher income, but this is not always the case. This inaccuracy could lead to bias in the model.
 
-Also, an assumption for the general linear mixed model is that the random effect follows the normal distribution, but since there is only one of each postal code in our dataset, the random effects will instead be uniform. Thus the assumption is broken, which means the model results may be inaccurate.
+Also, an assumption for the general linear mixed model is that the random effect follows the normal distribution, but since there is only one of each postal code in our dataset, the random effects will instead be uniform. Thus the assumption is broken, which means the model results may be inaccurate. In future work we could use a gam model, which accounts for this problem. 
 
 
 There were several limitations when analyzing the information on skin tones and sleep scores. 
@@ -508,12 +481,13 @@ The first major limitation is that the missing values (default skin tone emoji) 
 
 Another limitation is that it is possible that the skin tone emoji a person uses is not their actual skin tone. As it is impossible to verify as a race variable was not included, the analysis may be biased as we do not get the true relationship between skin tone and flags.
 
-Another limitation is that while the mean and median flags for each skin tone was close, they were not very close. This may violate the poisson assumption  that mean most always be equal to variance. This means that there may be overdispersion of coefficients (coefficients reported are larger than their true variable).
+Another limitation is that while the mean and median flags for each skin tone was close, they were not very close. This may violate the poisson assumption  that mean most always be equal to variance. This means that there may be overdispersion of coefficients (coefficients reported are larger than their true variable). In future work we can use the form of the generalized poisson model that accounts for over dispersion. 
 
-We also dropped all observations in which sex was missing. This could cause bias in the model if the missing variables were not randomly distributed. 
+We also dropped all observations in which sex was missing. This could cause bias in the model if the missing variables were not randomly distributed. In future work we could collect better data on this variable.  
 
-A main assumption for the type of model used is that the random effects need to come from a normal distribution. However as our random effects was the customer id, which is unique to each customer,the distribution is uniform. Thus our estimates are likely biased. 
+A main assumption for the type of model used is that the random effects need to come from a normal distribution. However as our random effects was the customer id, which is unique to each customer, the distribution is uniform. Thus our estimates are likely biased. 
 
+While the model is assumed correct, the residual plot had some downwards patterns. This may indicate that the model may not be correct due to th irregular residuals. Further investigation may be needed to find the best model to use. 
 
 \newpage
 
@@ -525,21 +499,21 @@ A main assumption for the type of model used is that the random effects need to 
 
 **Pablo Mercado**. Pablo is a junior consultant with Arpesso. He specialize in reproducible analysis and statistical communication. Pablo earned their Bachelor of Science, Majoring in Computer Science and Statistics from the University of Toronto in 2022.
 
-**Olaedo Okpareke**. Olaedo Okpareke is a senior consultant at Arpesso Analytics. She specializes in statistical analysis and data visualization in R and Python. She also specializes in statistical surveys and sampling, as well as financial risk analysis. Olaedo earned her Bachelor of Science in Economics and Statistics from the University of Toronto in 2023, and her masters in Economic Data analysis from University of Toronto in 2026. 
+**Olaedo Okpareke**. Olaedo Okpareke is a senior consultant at Arpesso. She specializes in statistical analysis and data visualization in R and Python. She also specializes in statistical surveys and sampling, as well as financial risk analysis. Olaedo earned her Bachelor of Science in Economics and Statistics from the University of Toronto in 2023, and her masters in Economic Data analysis from University of Toronto in 2026. 
 
-**Walid Roudani**. Walid Roudani is a senior consultant with Arpesso Analytics. He specializes in reproducible analysis, statistical communication, as well as team organization. Walid has earned both his Bachelor of Science in Economics and Statistics from the University of Toronto in 2023, as well as his masters degree in Economics at the University of Toronto in 2026.
+**Walid Roudani**. Walid Roudani is a senior consultant with Arpesso. He specializes in reproducible analysis, statistical communication, as well as team organization. Walid has earned both his Bachelor of Science in Economics and Statistics from the University of Toronto in 2023, as well as his masters degree in Economics at the University of Toronto in 2026.
 
 ## Code of ethical conduct
 
 In our report, we represented all summaries and visualizations honestly. We did not create any misleading visualizations. When modifications to variables were made, they were very explicitly stated and justified. We stated clearly all limitations of the analysis, and any failings of our method. 
 
-We did not disclose any personal customer information from MINGAR to any third party, as disclosed by the Non-disclosure agreement. All confidential information was analyzed solely by the statistic consultants for the report at Arpesso. As no consent was given by MINGAR to spread the customer information, and was not directed by the court of law, the information was kept confidential. 
+We did not disclose any personal customer information from MINGAR to any third party, as disclosed by the Non-disclosure agreement. All confidential information was analyzed solely by the statistic consultants for the report at Arpesso. As no consent was given by MINGAR to spread the customer information, and was not directed by the court of law, the information was kept confidential. Due to this, we have removed the postcode data and the census API key. 
 
 In preparing the report, Arpesso remained objective with handling of the data, and did not modify any variables or give false results to uphold personal biases. The statistical procedures used to create the data was done based on the data itself and not on personal decisions.
 
 While scraping the data required for our report, we made sure to uphold the rights of the owner by providing a user agent string for further inquiries, and so that our requests are made clear. We scraped the data at a timely rate, made sure to not pass the data off as our own, and scraped to create new datasets from the data, not to duplicate it. 
 
-All sensitive customer information was kept anonymized. Arpesso did not attempt to use the information to identify individuals. To uphold customer's privacy, all personal information was used solely for the purpose of analysis and no non-essential identifying information was used.
+All sensitive customer information was kept anonymous. Arpesso did not attempt to use the information to identify individuals. To uphold customer's privacy, all personal information was used solely for the purpose of analysis and no non-essential identifying information was used.
 
 \newpage
 # References
@@ -595,23 +569,10 @@ All sensitive customer information was kept anonymized. Arpesso did not attempt 
 \newpage
 # Appendix
 
-Appendix should have the tables which support was was said in the main body. 
 _These appendices should outline in more detail the steps taken to access the following datasets. They should NOT include code, but should briefly describe the steps and important considerations. I.e., show that you understand what needs to be considered when web scraping, protecting licensed data, etc._
 
-The following table helps show the relationship between an individual's age and the flags they got. We see that younger age groups tend to have a higher mean number of flags and rate of flags per minute of sleep. However, the variances for each age group are quite large, showing that there may be some inaccuracy in the relationship between the variables. 
-```{r, echo = FALSE}
-socialmedia_data %>%
-    group_by(age_group) %>%
-    dplyr::summarize(MeanCount = mean(flags, na.rm=TRUE),
-              VarCount = var(flags, na.rm=TRUE),
-              MeanRate = mean(flags/duration, na.rm=TRUE),
-              VarRate = var(flags/duration, na.rm=TRUE),
-              n = n()) %>% 
-  knitr::kable(booktabs=T, 
-        caption = 'The mean and variance of flags in slap by skin tone emoji.')
-```
 
-```{r}
+```{r,include=FALSE}
 # residual plot for sleep score data
 res.df <- data.frame(resid = residuals(modrace2), fit = fitted(modrace2))
 ggplot(res.df, aes(x = fit, y = resid)) +
@@ -622,7 +583,7 @@ ggplot(res.df, aes(x = fit, y = resid)) +
 
 ```
 
-```{r}
+```{r,include=FALSE}
 # residual plot for new customers data
 res.df <- data.frame(resid = residuals(market_model2), fit = fitted(market_model2))
 ggplot(res.df, aes(x = fit, y = resid)) +
@@ -633,10 +594,10 @@ ggplot(res.df, aes(x = fit, y = resid)) +
 ```
 
 ## Web scraping industry data on fitness tracker devices
-
+put eval = false and censor the api key
 ## Accessing Census data on median household income
 
 ## Accessing postcode conversion files
-
+dont add postcode conversion code 
 
 __Final advice: KNIT EARLY AND OFTEN!__
