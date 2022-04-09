@@ -63,7 +63,7 @@ Also, MINGAR has received complaints about discriminatory devices: Darker skinne
 * We encountered a slight overdispersion in the sleep score data. This could cause biased coefficients. 
 
 ```{r,echo=FALSE}
-socialmedia_data <- read_csv("data/socialmedia_data", show_col_types = FALSE)
+socialmedia_data <- read_csv("data/socialmedia_data")
 #table 1:
 
 Variable <- c("Intercept", "Medium-Light Skin Tone", "Medium Skin Tone", "Medium-Dark Skin Tone", "Dark Skin Tone", "Age")
@@ -78,7 +78,7 @@ Table # put caption!
 ```
 
 
-```{r,fig.height=3, echo=FALSE, fig.cap = "Proportion of the Number of Flags by Skin Tone}
+```{r,fig.height=3, echo=FALSE, fig.cap = "Proportion of the Number of Flags by Skin Tone"}
 #figure 1:
 ggplot(data = socialmedia_data, aes(x = flags, fill = emoji_modifier)) +
   geom_bar(position = "fill") +
@@ -116,18 +116,21 @@ In this report we create a model to find the relationship between the sleep scor
 Our variable of interest is the number of flags during a night of sleep for each person. We see that the distribution of this variable is approximately poisson as it is right skewed with many values at 0. From the figure below it appears that people with darker skin tones get more quality flags during sleep than people of lighter skin tones.
 
 ```{r, fig.height=3, echo = FALSE, fig.cap = "Distribution of sleep disruption flags by skin tone"}
+# distribution of sleep flags by skin tone
 socialmedia_data %>%
   ggplot(data =., aes(x=flags, fill = emoji_modifier)) +
   geom_histogram()+ 
   theme_minimal() +
   labs(x = "Flags",
        y = "Count",
-       fill = "Skin Tone") 
+       fill = "Skin Tone") # grouping by skin tone
 ```
 
 The following table shows the summary on number of flags for all wearers of the devices over the several nights. The count is the number of times that flags happened per night, and the rate is the number of flags per minute of sleep. We see that the mean and variance of both counts and rates for darker skinned people tends to be larger than lighter skinned people. This indicates that MINGAR might have a problem with darker skinned people getting flagged more often. As the mean and variance are close for the most part, we can assume that this assumption for the poisson distribution is satisfied.  
 
 ```{r, echo = FALSE}
+
+# creating mean and average sleep flag numbers for each skin tone
 socialmedia_data %>%
     group_by(emoji_modifier) %>%
     dplyr::summarize(MeanCount = mean(flags, na.rm=TRUE),
@@ -136,31 +139,30 @@ socialmedia_data %>%
               VarRate = var(flags/duration, na.rm=TRUE)) %>%
   knitr::kable(booktabs=T,
                col.names = c("Skin Tone", "Mean Count", "Variance of Count", "Mean Rate", "Variance of Rate"),
-             caption = 'The mean and variance for number of flags and rate of flags by skin tone.') 
+             caption = 'The mean and variance for number of flags and rate of flags by skin tone.') # creating table
 ```
 
-Looking at the proportion of people in the data, we see that lighter skinned people have more sleep devices than darker skinned people.
-
-```{r, echo = FALSE}
-with(socialmedia_data,(prop.table(table(emoji_modifier)))) %>% 
-  knitr::kable(col.names = c("Skin Tone", "Frequency"), caption = 'Proportion of people with sleep flag data in each skin tone group.')
-```
 ### Methods
 
 *state what types of model we're looking to assume, eg is it assumption for poisson, for glmm, etc* 
 
 ```{r,include = FALSE}
+# creating models
 modrace2 = glmer(flags ~ emoji_modifier + scales::rescale(age, to = c(0,1)) + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
 modrace = glmer(flags ~ emoji_modifier + sex + scales::rescale(age) + device_name + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
+
+# model summaries
 summary(modrace)
 summary(modrace2)
 
 ```
 ```{r, include = FALSE}
+# testing models
 lmtest::lrtest(modrace2, modrace)
+
 ```
 
-To create the main dataset, we merged the customer information data, the sleep data, and the customer device data. To create the possible explanatory models, we created an age variable by subtracting the date of birth of the individual from the date of analysis; March 30th 2022. We renamed the emoji variables to understandable skin tones, and removed all missing values in this variable. We dropped all missing values for the sex variable to make the two possible explanatory models formed comparable in size. we rescaled the age variable to be confined only to values within 0 and 1, which was done to solve errors in creating the model. 
+To create the main dataset, we merged the customer information data, the sleep data, and the customer device data. To create the possible explanatory models, we created an age variable by subtracting the date of birth of the individual from the date of analysis; March 30th 2022. We renamed the emoji variables to understandable skin tones, and removed all missing values in this variable as we could not use the missing values in analysis. We dropped all missing values for the sex variable to make the two possible explanatory models formed comparable in size. we rescaled the age variable to be confined only to values within 0 and 1, which was done to solve errors in creating the model. 
 
 We used generalized linear mixed models to estimate the relationships between sleep flags and explanatory variables. We used this model as our response is not of the normal distribution, and we have a random effect we need to account for. We want to use this model to estimate the sleep scores for the entire population of MINGAR device users and not simply this sample.
 
@@ -215,25 +217,29 @@ A secondary observation is that a one standard deviation increase in age is asso
 
 
 ```{r,cache = TRUE, include = FALSE,eval=FALSE}
+
 confidence = confint(modrace2)
-# estimates
+
+# exponentiating estimates for interpretation
 ests <- format(round(exp(summary(modrace2)$coeff)[,1], 3), nsmall = 2)
 
 
-# Get your confidence intervals
+# Getting confidence intervals
 cis <- format(round(exp(confidence),3)[-1,], nsmall = 2)
 
 
-## But make it even prettier
+# Making table palatable
 cis_pretty <- str_c("(", trimws(cis[,1]), ", ", cis[,2], ")")
 cis_pretty
 
-# What are the nice names for the rows and columns?
+# Labelling table
 rownames_for_table <- c("Intercept", "Dark Skin Tone", "Medium Skin Tone", "Medium-Dark Skin Tone", "Medium-Light Skin Tone","Age")
 colnames_for_table <- c("Estimate", "95% Confidence Interval")
 ```
 
 ```{r, echo = FALSE,eval=FALSE}
+
+# creating table
 table <- cbind(ests, cis_pretty)
 rownames(table) <- rownames_for_table
 colnames(table) <- colnames_for_table
@@ -245,22 +251,26 @@ knitr::kable(table, align = c("r", "r"),caption = "Estimate and 95% confidence i
 The following plot helps visualize the previous results. We see that the lightest skin tone mainly hangs around the low end of the number of flags, with about 50% of people with 0 flags having this skin tone. The proportion of people with a low number of flags decreases as the skin tone gets darker. We see that the two darkest skin tones make up the largest proportion of people who get many quality flags a night. 
 
 ```{r, fig.height=3, echo = FALSE, fig.cap = "Proportion of People with flags by skin tone"}
+
+# grouping proportion of flags by skin tone
 ggplot(data = socialmedia_data, aes(x = flags, fill = emoji_modifier)) +
   geom_bar(position = "fill") +
   scale_fill_grey() +
   theme_minimal() +
-  labs(fill = "Skin Tone", x = "Flags", y = "Proportion")
+  labs(fill = "Skin Tone", x = "Flags", y = "Proportion") # changes from count to proportion
 ```
 
 This plot shows the estimated relationship between the log mean value of flags and the age of the person. The plot also shows the confidence intervals around the line. The log of the y axis is taken due to the poisson nature of the response. Due to the negative slope, we see that the younger one is, the more likely they are to have a larger mean number of flags. Thus there is a negative relationship between these two variables, holding skin tone constant. 
 
 ```{r,fig.height=3, echo = FALSE, fig.cap = "Mean number of Flags by Age"}
+
+# Dividing age into different groups
 plot <- socialmedia_data %>% group_by(age) %>% 
   summarise(mnflag = mean(flags),
-            logmnflag = log(mnflag), n=n())
+            logmnflag = log(mnflag), n=n()) #changing value for poisson interpretation
 ggplot(plot, aes(x=age, y=logmnflag)) +
   geom_point()+
-  geom_smooth(method = "loess", size = 1)+
+  geom_smooth(method = "loess", size = 1)+ # modelling method
   xlab("Age of the person") +
   ylab("Log of the empirical mean number of flags") +
   theme_minimal()
@@ -281,18 +291,18 @@ In this report we create a model to find the relationship between purchasing the
 
 From this data, we see that all the variables are either bernoulli or binomially distributed. We also see that most purchasers of total MINGAR devices are between the ages of 25 to 50, middle class, and female. 
 
-```{r,fig.height=3, message=FALSE, warning=FALSE, include = TRUE, echo = FALSE, fig.cap = "Visualizing the response and key variables" }
+```{r,fig.height=3, message=FALSE, warning=FALSE, include = TRUE, echo = FALSE, fig.cap = "Visualizing the response and explanatory variables" }
 
 marketing_data <- read_csv("data/marketing_data", show_col_types = FALSE)
 
-# create a visualization
+# creating visualization for the variables
 plot1 = marketing_data %>%
   ggplot(aes(x = affordable, fill = affordable)) +
   geom_bar() +
   labs(x = "Purchased Active or Advance Lines",
        y = "Count") +
   theme_minimal() +
-  theme(legend.position = "none")
+  theme(legend.position = "none") # remove the legend
 
 plot2 = marketing_data %>%
   ggplot(aes(x = age)) + 
@@ -340,6 +350,7 @@ plot6 = marketing_data %>%
   theme_minimal() +
   theme(legend.position = "none")
 
+# putting all graphs in the same space
 grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=2)
 
 ```
@@ -373,6 +384,7 @@ The coefficients of our variable are exponentiated into the odds ratio, to be in
 
 
 ```{r, cache=TRUE, warning=FALSE, include = FALSE}
+# creating models 
 market_model1 = glmer(affordable ~ factor(income_class) + (1 | postcode),
                          data = marketing_data, family = "binomial")
 
@@ -381,9 +393,11 @@ market_model2 = glmer(affordable ~ factor(income_class) + age + (1 | postcode),
 
 market_model3 = glmer(affordable ~ factor(income_class) + age + sex +(1 | postcode), data = marketing_data, family = "binomial")
 
+# Testing/comparing models
 lrtest(market_model1,market_model2)
 lrtest(market_model2,market_model3)
 
+# summarizing main model
 summary(market_model2)
 ```
 
@@ -395,7 +409,6 @@ We perform a kruskal-wallis non-parametric test to check if the proportion of pe
 
 ```{r,include=FALSE}
 # Are the proportions of people buying the newer affordable devices similar across income?
-
 kruskal.test(affordable ~ factor(income_class), data = marketing_data)
 ```
 
@@ -407,13 +420,17 @@ The  estimate for age  was 1.005,meaning that for each additional age,the likeli
 ```{r, cache=TRUE,eval=FALSE}
 confint <- confint(market_model2)
 
+# exponentiating results for interpretation
 exp_coef <- exp(summary(market_model2)$coeff[,1])
 exp_confint <- exp(confint(market_model2))
 ```
 
 ```{r, message=FALSE, warning=FALSE, include = TRUE, echo = FALSE,eval=FALSE}
+
+# making result table more palatable
 cis_pretty <- str_c("(", trimws(round(exp_confint[2:5,1], 3)), ", ", round(exp_confint[2:5,2],3), ")")
 
+# creating the table and labelling them
 market_table <- cbind(round(exp_coef,3), cis_pretty)
 rownames(market_table) <- c("Intercept", "Middle Class", "Upper Class", "Age")
 colnames(market_table) <- c("Estimate", "95% Confidence Interval")
@@ -426,6 +443,8 @@ kable(market_table, align = c("c", "c"))
 The following plot helps visualize the previous results. We see that nearly 75% of lower income people who owned a MINGAR device owned the newer affordable device. The proportion of middle income people that own the newer devices is only just above 50%, and for high income people is less than 50%. This shows that the richer a person is, the less likely that they own a newer device. 
 
 ```{r,fig.height=3, echo=FALSE, fig.cap = "Proportion of People in each Income class who Purchased the Newer Devices"}
+
+# grouping income class by decision to purchase new device
 ggplot(data = marketing_data, aes(x = factor(income_class), fill = affordable)) +
   geom_bar(position = "fill") +
   scale_fill_grey() +
@@ -437,11 +456,13 @@ ggplot(data = marketing_data, aes(x = factor(income_class), fill = affordable)) 
 This plot shows the estimated relationship between the log mean value of the decision to buy the newer affordable products, and the age of the person. The plot also shows the confidence intervals around the line, segmented by income class. The log of the y axis is taken due to the bernoulli nature of the response. Due to the positive slope, we see that the older one is, the more likely they are to purchase the new affordable devices. We also see that the regression line for the lower class customers is higher than those of the middle class and upper class customers. Thus there is a positive relationship between age and the decision to buy newer products, and poorer customers are more likely to purchase the newer products. 
 
 ```{r,fig.height=3, echo=FALSE, fig.cap = "Mean value of the Purchase decision by Age, grouped by Income Class" }
+
+# Dividing the age variable into sections
 emplogit2 <- marketing_data %>%
   group_by(income_class, age) %>%
-  summarise(propnew = mean(affordable), n = n()) %>%
+  summarise(propnew = mean(affordable), n = n()) %>% #summarizing value for each group
   mutate(propnew = ifelse(propnew==0, .01, propnew)) %>%
-  mutate(emplogit = log(propnew / (1 - propnew)))
+  mutate(emplogit = log(propnew / (1 - propnew))) # changing it to binary
 ggplot(emplogit2, aes(x = age, y = emplogit, color = income_class)) +
   geom_point(aes(shape = income_class)) +
   geom_smooth(aes(linetype = income_class), method = "lm") +
@@ -460,29 +481,17 @@ For the characteristics of new customers,it is confirmed that a customer's age a
 
 For the relationship between sleep scores and skin tone, we have confirmed that MINGAR devices flag darker skinned people more often than lighter skinned people, holding  age constant. We find that the average number of flags during sleep for medium-light, medium, medium-dark, and dark skinned people are 2.173, 3.248, 6.624, and 10.913 times higher than the average number of flags for light skinned people respectively. The sleep scores decline exponentially as the skin tone gets darker. This accounts for the duration of sleep, and the dependency of sleep scores for the same individual. We have also found that the age of the individual affects the average  number of flags they get, with a one standard deviation increase in age being associated with a 4.9% decrease in the mean number of flags, skin tone held constant. 
 
-### Strengths and limitations
+### Strengths
 
-The major strengths of the customer characteristics model and analysis is the versatility and information this model provides on consumer behavior and consumption. Mainly, we know that lower income families have much greater odds to purchase more affordable smart watches than middle class and upper class families, and that older people will have higher odds to buy affordable smart watches. So, the marketing team of Mingar can shift their focus and advertising more to that market in regards to the affordable lines of 'active' and 'advance.' 
+The major strengths of the customer characteristics model and analysis is the versatility and information this model provides on consumer behavior and consumption. Mainly, we know that lower income families have much greater odds to purchase more affordable smart watches than middle class and upper class families, and that older people will have higher odds to buy affordable smart watches. So, the marketing team of MINGAR can shift their focus and advertising more to that market in regards to the affordable lines of 'active' and 'advance.' 
 
 The strengths of the skin tone model include the fact that we used a random effect of the individual to account for that fact that observations were likely not independent for each individual. This helps us to generalize our results for the population, and not just this specific sample. We also decided to add an offset of duration, which accounts for the fact that rates of flags for each night could be different. Another strength includes the rationale for the model, which used the poisson distribution and not the normal distribution, to match with the response. A final strength is only including biological characteristics for the customers, as the sleep trackers work off of biological qualities such as skin tone. 
 
-A limitation of this analysis is that we dropped all the cases where a person's sex or pronouns were not included. This reduced our sample, which could possible introduce some bias to our model if the missing values were not randomly distributed. In future work we could try to collect better data on this variable.  
+### Limitations
 
-Another limitation of our model is from how we defined some of our variables used in the model. We defined income classes based of the percentiles within the data rather than following a standard, like the Canadian Tax bracket, because the ranges of these classifications tend to make all observations heavily lean towards only one factor of the bracket. Many of these brackets cite that `$`50 000 to `$`100 000 as one factor, but that range contains over 98% of the observations.
+A limitation of this analysis is that we dropped all the cases where a person's sex or pronouns were not included. This reduced our sample, which could possible introduce some bias to our model if the missing values were not randomly distributed. In future work we could try to collect better data on this variable. Another limitation of our model is from how we defined some of our variables used in the model. We defined income classes based of the percentiles within the data rather than following a standard, like the Canadian Tax bracket, because the ranges of these classifications tend to make all observations heavily lean towards only one factor of the bracket. Many of these brackets cite that `$`50 000 to `$`100 000 as one factor, but that range contains over 98% of the observations. Another limitation was from defining the household median income. Most postcodes corresponded with multiple 'CSDuid' which meant that a single postcode also responds to many different median household incomes. To account for this, we took the average of all the median household incomes for when 'CSDuid' corresponded with the same postcode to create a new median household income for each postcode. All of these definitions may contribute inaccuracy to our data which could then affect the validity of the model. We assumed those who lived in lower income neighborhoods were lower income and those that lived in higher income neighbourhoods are higher income, but this is not always the case. This inaccuracy could lead to bias in the model. An assumption for the general linear mixed model is that the random effect follows the normal distribution, but since there is only one of each postal code in our dataset, the random effects will instead be uniform. Thus the assumption is broken, which means the model results may be inaccurate. In future work we could use a gam model, which accounts for this problem. 
 
-Another limitation was from defining the household median income. Most postcodes corresponded with multiple 'CSDuid' which meant that a single postcode also responds to many different median household incomes. To account for this, we took the average of all the median household incomes for when 'CSDuid' corresponded with the same postcode to create a new median household income for each postcode. All of these definitions may contribute inaccuracy to our data which could then affect the validity of the model. 
-
-Another limitation is that we assumed those who lived in lower income neighbourhoods were lower income and those that lived in higher income neighbourhoods are higher income, but this is not always the case. This inaccuracy could lead to bias in the model.
-
-An assumption for the general linear mixed model is that the random effect follows the normal distribution, but since there is only one of each postal code in our dataset, the random effects will instead be uniform. Thus the assumption is broken, which means the model results may be inaccurate. In future work we could use a gam model, which accounts for this problem. 
-
-The first major limitation for the sleep scores model is that the missing values (default skin tone emoji) was not accurate to the actual skin tone of the individual. As their true skin tone was not recorded, these individuals were dropped from the model, and analysis created is most likely biased as we dropped a large number of the observations. 
-
-Another limitation is that while the mean and median flags for each skin tone was close, they were not very close. This may violate the poisson assumption  that mean most always be equal to variance. This means that there is overdispersion of coefficients (coefficients reported are larger than their true variable). In future work we can use the form of the generalized poisson model that accounts for over dispersion. 
-
-We also dropped all observations in which sex was missing. This could cause bias in the model if the missing variables were not randomly distributed. In future work we could collect better data on this variable.  
-
-A main assumption for the type of model used is that the random effects need to come from a normal distribution. However as our random effects was the customer id, which is unique to each customer, the distribution is uniform. Thus our estimates are likely biased. 
+The first major limitation for the sleep scores model is that the missing values (default skin tone emoji) was not accurate to the actual skin tone of the individual. As their true skin tone was not recorded, these individuals were dropped from the model, and analysis created is most likely biased as we dropped a large number of the observations. Another limitation is that while the mean and median flags for each skin tone was close, they were not very close. This may violate the poisson assumption  that mean most always be equal to variance. This means that there is overdispersion of coefficients (coefficients reported are larger than their true variable). In future work we can use the form of the generalized poisson model that accounts for over dispersion. We also dropped all observations in which sex was missing. This could cause bias in the model if the missing variables were not randomly distributed. In future work we could collect better data on this variable.A main assumption for the type of model used is that the random effects need to come from a normal distribution. However as our random effects was the customer id, which is unique to each customer, the distribution is uniform. Thus our estimates are likely biased. 
 
 \newpage
 
@@ -562,8 +571,6 @@ All sensitive customer information was kept anonymous. Arpesso did not attempt t
 \newpage
 # Appendix
 
-_These appendices should outline in more detail the steps taken to access the following datasets. They should NOT include code, but should briefly describe the steps and important considerations. I.e., show that you understand what needs to be considered when web scraping, protecting licensed data, etc._
-
 ## Web scraping industry data on fitness tracker devices
 put eval = false and censor the api key
 
@@ -573,10 +580,37 @@ The data on fitness devices was scraped from https://fitnesstrackerinfohub.netli
 
 The Census data on median household income was retrieved from The Statistics Canada 2016 census, through the website API of the Canadian census mapper. To begin, we signed up a user account on their website to be given the API key needed to access their data. Next, we installed and used the`cancensus` package, and used the API key that we were given to get the median household income. This was done by first finding the regions from the year 2016. We then filter those received regions to match the relevant census subdivisions in our customer data. Finally, we simplified the data set's variables to only the ones required for our analysis. 
 
-## Accessing postcode conversion files
+```{r,eval=FALSE}
+options(cancensus.api_key = "Our API key goes here",
+        cancensus.cache_path = "cache") 
 
-dont add postcode conversion code 
+# get all regions as at the 2016 Census (2020 not up yet)
+regions <- list_census_regions(dataset = "CA16")
+regions_filtered <-  regions %>% 
+  filter(level == "CSD") %>% 
+  as_census_region_list()
+
+# We want to get household median income
+census_data_csd <- get_census(dataset='CA16', regions = regions_filtered,
+                          vectors=c("v_CA16_2397"), 
+                          level='CSD', geo_format = "sf")
+
+# Simplify to only needed variables
+median_income <- census_data_csd %>% 
+  as_tibble() %>% 
+  select(CSDuid = GeoUID, contains("median"), Population) %>% 
+  mutate(CSDuid = parse_number(CSDuid)) %>% 
+  rename(hhld_median_inc = 2)
+```
+
+## Accessing postcode conversion files
 
 The postcode conversion files were retrieved directly from the Canadian Census postal code conversion files using our credentials as University of Toronto students. We chose the the most recently released data set from August 2021 because we wanted the most relevant and recent data to answer the research questions accurately. In the process of downloading this data, we agreed to a license agreement to use this data and have also chosen to not upload the raw data to our github. We only upload the processed data which can be analyzed to reproduce the report.
 
-
+```{r,eval=FALSE}
+#reading .sav file for postcode data
+dataset = read_sav("Censored for Privacy")
+#creating data frame and selecting only relevant variables
+postcode <- dataset %>%
+  select(PC, CSDuid)
+```

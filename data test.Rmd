@@ -1,0 +1,231 @@
+
+
+```{r, libraries}
+#install packages if it errors on the cancensus data and postal code data
+install.packages("eeptools")
+install.packages("cancensus")
+install.packages("haven")
+# Set up any libraries you need
+library(tidyverse)
+library(polite)
+library(rvest)
+library(janitor)
+library(cancensus)
+library(haven)
+library(eeptools)
+library(lme4) 
+library(lmtest)
+```
+# Loading client data
+```{r}
+#loading raw rds files into environment
+customer <- readRDS("data-raw/customer.Rds")
+device <- readRDS("data-raw/device.Rds")
+cust_dev <- readRDS("data-raw/cust_dev.Rds")
+cust_sleep <- readRDS("data-raw/cust_sleep.Rds")
+postcode = readRDS("data-raw/break_glass_in_case_of_emergency.Rds")
+```
+# Getting external data
+
+## Web scraping industry data
+```{r}
+#declaring the url
+url <- "https://fitnesstrackerinfohub.netlify.app/"
+#creating target, providing proper user agent
+target <- bow(url,
+              user_agent = "pablo.mercado@mail.utoronto.ca for STA303/1002 project",
+              force = TRUE)
+#scraping
+html <- scrape(target)
+#creating data set from web scrapping
+device_data <- html %>% 
+  html_elements("table") %>% 
+  html_table() %>% 
+  pluck(1)
+```
+
+# Census API
+```{r}
+options(cancensus.api_key = "CensusMapper_097b519443c084075f1669e5a98ed736",
+        cancensus.cache_path = "cache") 
+# get all regions as at the 2016 Census (2020 not up yet)
+regions <- list_census_regions(dataset = "CA16")
+regions_filtered <-  regions %>% 
+  filter(level == "CSD") %>% 
+  as_census_region_list()
+
+# We want to get household median income
+census_data_csd <- get_census(dataset='CA16', regions = regions_filtered,
+                          vectors=c("v_CA16_2397"), 
+                          level='CSD', geo_format = "sf")
+# Simplify to only needed variables
+median_income <- census_data_csd %>% 
+  as_tibble() %>% 
+  select(CSDuid = GeoUID, contains("median"), Population) %>% 
+  mutate(CSDuid = parse_number(CSDuid)) %>% 
+  rename(hhld_median_inc = 2)
+```
+# Postal Code data
+```{r}
+#reading .sav file for postcode data
+dataset = read_sav("data-raw/pccfNat_fccpNat_082021sav.sav")
+#creating data frame and selecting only relevant variables
+postcode <- dataset %>%
+  select(PC, CSDuid)
+```
+
+## Joining the Data
+
+```{r}
+#creating a new data set joining all customer data by "cust_id"
+cust_full = customer %>%
+  left_join(cust_dev, by = "cust_id") 
+  
+cust_sleep_full = cust_full %>%
+  right_join(cust_sleep, by = "cust_id")
+
+#creating a data set joining device data by "device_name"
+device_full = device_data %>% 
+  rename("device_name" = "Device name") %>%
+  right_join(device) %>%
+  clean_names()
+
+# joining the postcode data with income data
+geo_data = postcode %>%
+  left_join(median_income) %>%
+  rename("postcode"  = "PC") %>%
+  group_by(postcode) %>%
+  summarize(hhld_median_inc = mean(hhld_median_inc))
+
+# joining the main datasets
+data_full = cust_full %>%
+  left_join(device_full) %>%
+  left_join(geo_data)
+
+# removing duplicate columns
+marketing_data = data_full %>%
+  select(-dev_id,-line_2,-released_2)
+
+# getting social media data
+socialmedia_data = cust_sleep_full %>%
+  left_join(device_full) %>%
+  left_join(geo_data) 
+  
+```
+# cleaning the data
+
+```{r}
+# dropping missing variables in sex
+marketing_data = marketing_data %>%
+  drop_na(sex,pronouns)
+
+# renaming the observations in the skin tone column  
+marketing_data$emoji_modifier = recode(marketing_data$emoji_modifier, 
+                                       `U+1F3FB` = "light skin tone",
+                                       `U+1F3FC` = "medium-light skin tone",
+                                       `U+1F3FD` = "medium skin tone",
+                                       `U+1F3FE` = "medium-dark skin tone",
+                                       `U+1F3FF` = "dark skin tone")
+marketing_data$emoji_modifier = marketing_data$emoji_modifier %>%
+  replace_na("default skin tone")
+marketing_data$emoji_modifier = factor(marketing_data$emoji_modifier, levels = c("default skin tone",
+                                                                                 "light skin tone",
+                                                                                 "medium-light skin tone",
+                                                                                 "medium skin tone",
+                                                                                 "medium-dark skin tone",
+                                                                                 "dark skin tone"))
+
+# creating the income classes, creating age variable, creating the response
+marketing_data = marketing_data %>%
+  mutate(affordable = ifelse(line == "Advance" | line == "Active", TRUE, FALSE),
+         age = floor(age_calc(dob, units = "years")),
+         income_class = ifelse(hhld_median_inc <= 65327, "lower class",
+                        ifelse(65327 < hhld_median_inc & hhld_median_inc <= 85981, "middle class", 
+                        ifelse(hhld_median_inc > 85981, "upper class"))))
+
+
+# creating income classes
+socialmedia_data = socialmedia_data %>%
+  mutate(age = floor(age_calc(dob, units = "years")), # creating the age variable
+         device_age = floor(age_calc(released_2, units = "years")),
+         income_class = ifelse(hhld_median_inc <= 65327, "lower class",
+                        ifelse(65327 < hhld_median_inc & hhld_median_inc <= 85981, "middle class", 
+                        ifelse(hhld_median_inc > 85981, "upper class")))) %>%
+  filter(!is.na(sex)) %>%
+  mutate(age_group = case_when (
+             age <= 20 ~ "Less than 20",
+             age <= 30 ~ "20 to 30",
+             age <= 40 ~ "30 to 40",
+             age <= 50 ~ "40 to 50",
+             age <= 60 ~ "50 to 60",
+             age <= 70 ~ "60 to 70",
+             age <= 80 ~ "70 to 80",
+             age <= 100 ~ "80 or more",
+             TRUE ~ "None"  # creating age groups
+             )) %>%
+  filter(!is.na(emoji_modifier)) %>% # dropping missing skin tone observations
+  mutate(emoji_modifier = case_when (
+    emoji_modifier == "U+1F3FB" ~ "Light Skin",
+    emoji_modifier == "U+1F3FC" ~ "Medium-Light Skin",
+    emoji_modifier == "U+1F3FD" ~ "Medium Skin",
+    emoji_modifier == "U+1F3FE" ~ "Medium-Dark Skin",
+    emoji_modifier == "U+1F3FF" ~ "Dark Skin",
+    TRUE ~ "None" # renaming skin tone observations 
+  )) %>%
+  select(-pronouns,-dev_id, -line_2,-released_2)
+
+socialmedia_data$emoji_modifier = fct_relevel(socialmedia_data$emoji_modifier, "Light Skin","Medium-Light Skin","Medium Skin","Medium-Dark Skin","Dark Skin")
+
+# creating datasets
+write_csv(marketing_data, "data/marketing_data")
+write_csv(socialmedia_data, "data/socialmedia_data")
+```
+
+```{r}
+levels(socialmedia_data$emoji_modifier)
+```
+
+# Possible sleep score models
+```{r}
+# creating models
+modrace2 = glmer(flags ~ emoji_modifier + scales::rescale(age) + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
+modrace = glmer(flags ~ emoji_modifier + sex + scales::rescale(age) + device_name + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
+modrace3 = glmer(flags ~ emoji_modifier + age + income_class + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
+
+# summaries of models
+summary(modrace)
+summary(modrace2)
+summary(modrace3)
+```
+
+# Model Comparisons
+```{r}
+# Testing models
+lmtest::lrtest(modrace2, modrace)
+lmtest::lrtest(modrace2, modrace3)
+```
+
+
+## Residual Plots
+```{r}
+# residual plot for sleep score data
+res.df <- data.frame(resid = residuals(modrace2), fit = fitted(modrace2))
+ggplot(res.df, aes(x = fit, y = resid)) +
+  geom_point() +
+  ylab("Residuals from model") +
+  xlab("Fitted values from model") +
+  theme_minimal()
+
+```
+
+```{r}
+# residual plot for new customers data
+res.df <- data.frame(resid = residuals(market_model2), fit = fitted(market_model2))
+ggplot(res.df, aes(x = fit, y = resid)) +
+  geom_point() +
+  ylab("Residuals from model") +
+  xlab("Fitted values from model") +
+  theme_minimal()
+```
+
+
