@@ -504,8 +504,6 @@ In our report, we represented all summaries and visualizations honestly. We did 
 
 We did not disclose any personal customer information from MINGAR to any third party, as disclosed by the Non-disclosure agreement. All confidential information was analyzed solely by the statistic consultants for the report at Arpesso. As no consent was given by MINGAR to spread the customer information, and was not directed by the court of law, the information was kept confidential. Due to this, we have removed the postcode data and the census API key. 
 
-In preparing the report, Arpesso remained objective with handling of the data, and did not modify any variables or give false results to uphold personal biases. The statistical procedures used to create the data was done based on the data itself and not on personal decisions.
-
 While scraping the data required for our report, we made sure to uphold the rights of the owner by providing a user agent string for further inquiries, and so that our requests are made clear. We scraped the data at a timely rate, made sure to not pass the data off as our own, and scraped to create new datasets from the data, not to duplicate it. 
 
 All sensitive customer information was kept anonymous. Arpesso did not attempt to use the information to identify individuals. To uphold customer's privacy, all personal information was used solely for the purpose of analysis and no non-essential identifying information was used.
