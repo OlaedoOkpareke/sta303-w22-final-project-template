@@ -1,6 +1,6 @@
 ---
 title: "Report on MINGAR Customers and Device Functionability"
-subtitle: "MINGAR devices Over-Flag Darker Skin People, Newer Affordable Devices are More Popular Among Lower Income People"
+subtitle: "Newer Affordable Devices are More Popular Among Lower Income People, MINGAR devices Over-Flag Darker Skinned People"
 author: "Report prepared for MINGAR by Arpesso"
 date: 2022-04-07
 lang: "en"
@@ -58,8 +58,8 @@ Also, MINGAR has received complaints about discriminatory devices: Darker skinne
 
 * We could not include people who do not completely fill out their census data. This could cause bias in the report_
 * We are defining income classes based on the percentiles within our data set rather than using actual classification like Canadian tax brackets. There may be more accurate ways to describe the income classes._
-* There was no way to determine the actual race of the users whose skin tone was described as “Yellow” in the dataset, which is the default skin tone. This could cause bias in the model.
-* It was necessary to drop all data observations that did not have their “sex” reported.  Consequently, this could cause bias in the model.
+* There was no way to determine the actual race of the users whose skin tone was missing in the dataset, which meant the default skin tone. This could cause bias in the model.
+* We could not include in the model people who did not have their sex reported. Consequently, this could cause bias in the model.
 * We encountered a slight overdispersion in the sleep score data. This could cause biased coefficients. 
 
 ```{r,echo=FALSE}
@@ -97,7 +97,7 @@ MINGAR would like to improve the functionality of their devices and identify the
 
 In this report, we look for consumer characteristics that influence their purchasing decisions on the newer devices. We also investigate the claim that MINGAR devices are more faulty on darker skin.
 
-The report is separated into four distinct sections: Research Question, Data, Methods, and Discussion. We discuss the methodology for cleaning the data for the analyses, modifying variables, as well as testing and preparing the generalized linear mixed models that answer the research questions, and prepare summary tables and plots to convey our findings. Finally, we discuss the key findings of the analyses, as well as the models' strengths and weaknesses. 
+The report is separated into four distinct sections: Research Question, Data, Methods, and Discussion. We discuss the methodology for cleaning the data for the analyses, modifying variables, and testing and preparing the generalized linear mixed models that answer the research questions. We prepare summary tables and plots to convey our findings, and visualize and analyze the data that shows the relationship between our variables of interest and possible explanatory variables. Finally, we discuss the key findings of the analyses, as well as the models' strengths and weaknesses. 
 
 
 ### Research questions
@@ -150,7 +150,7 @@ with(socialmedia_data,(prop.table(table(emoji_modifier)))) %>%
 *state what types of model we're looking to assume, eg is it assumption for poisson, for glmm, etc* 
 
 ```{r,include = FALSE}
-modrace2 = glmer(flags ~ emoji_modifier + scales::rescale(age) + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
+modrace2 = glmer(flags ~ emoji_modifier + scales::rescale(age, to = c(0,1)) + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
 modrace = glmer(flags ~ emoji_modifier + sex + scales::rescale(age) + device_name + (1 | cust_id), family='poisson', offset = log(duration), data= socialmedia_data)
 summary(modrace)
 summary(modrace2)
@@ -209,10 +209,9 @@ kruskal.test(flags ~ emoji_modifier, data = socialmedia_data)
 
 The following table shows the results of the regression with our chosen model. The table includes the point estimates, as well as the 95% confidence interval range which gives the range of plausible values that each estimate could take. 
 
-We have set the lightest skin tone as the base factor level.  We see holding age constant and accounting for the duration of sleep and dependence of observations within the same individual, that the darker the subject's skin is, the more likely that they get flagged.
-The mean number of flags for medium-light skinned people, medium skinned people, medium-dark skinned people, and dark skinned people are 2.173, 3.248, 6.624, and 10.913 times higher than the mean number of flags for light skinned people respectively. Thus according to the results MINGAR devices do have a problem with flagging darker skinned people. *say something about the confidence intervals too* Like the confidenc eintervals show that skin tone x is almost always this higher than lightest skin tone/ it is plausible that skin tone x can go as high as...
-
-A secondary observation is that holding skin tone constant, the older one gets, the less likely they are to be flagged. As the age variable The mean number of flags increases by a factor of 0.999 (or decreases by 0.06%)for each additional age. *interpret this correctly now that I've scaled age!*
+We have set the lightest skin tone as the base factor level. We see holding age constant and accounting for the duration of sleep and dependence of observations within the same individual, that the darker the subject's skin is, the more likely that they get flagged.
+The average number of flags for medium-light skinned people, medium skinned people, medium-dark skinned people, and dark skinned people are 2.173, 3.248, 6.624, and 10.913 times higher than the average number of flags for light skinned people respectively. The confidence intervals show that even with 95% confidence darker skinned users get flagged more often. 
+A secondary observation is that a one standard deviation increase in age is associated with a 4.9% decrease in the mean number of flags, from which we can see that holding skin tone constant, the older one gets, the less that they are flagged. 
 
 
 ```{r,cache = TRUE, include = FALSE,eval=FALSE}
@@ -278,9 +277,9 @@ ggplot(plot, aes(x=age, y=logmnflag)) +
 
 ### The Data
 
-In this report we create a model to find the relationship between purchasing the new fitness trackers and characteristics of the buyer, accounting for the fact that people in the same postal code may have similar purchasing patterns. We  visualize and analyze the data that shows the relationship between the decision to purchase these new devices and possible explanatory variables. We use the MINGAR customer datasets, census data, postcode data, and a dataset on MINGAR devices. “Affordable”, a variable that is True if a purchased fitness tracker was affordable and was of the line Advance or Active and False otherwise, will be the response variable for the model.
+In this report we create a model to find the relationship between purchasing the new fitness trackers and characteristics of the buyer, accounting for the fact that people in the same postal code may have similar purchasing patterns. We use the MINGAR customer datasets, census data, postcode data, and a dataset on MINGAR devices. “Affordable”, a variable that is True if a purchased fitness tracker was affordable and was of the line Advance or Active and False otherwise, will be the response variable for the model.
 
-From this data, we see that all the variables are either bernoulli or binomial. We also see that most purchasers of total MINGAR devices are between the ages of 25 to 50, middle class, and female. 
+From this data, we see that all the variables are either bernoulli or binomially distributed. We also see that most purchasers of total MINGAR devices are between the ages of 25 to 50, middle class, and female. 
 
 ```{r,fig.height=3, message=FALSE, warning=FALSE, include = TRUE, echo = FALSE, fig.cap = "Visualizing the response and key variables" }
 
@@ -348,7 +347,7 @@ grid.arrange(plot1,plot2,plot3,plot4,plot5,plot6, ncol=2)
 ### Methods
 *state datasets that were merged*
 
-A generalized linear mixed model was created. The model will use a variety of customer-level variables as explanatory variables in order to predict whether a consumer will by a fitness tracker that is affordable or not.  As our response variable only contains observations of "True" or "False", it is of the binomial family. Thus our generalized linear model will use a logit link function, and thus the model will tell us about the relationship between our predictor variables and the Affordable response variable. We have a random effect we need to account for, which is the postal code, as purchasing patterns for people in the same postal code may be similar depending on if the area is lower or higher income. Since we would like to make claims about the entire population of customers as opposed to just those in our sample, we must use the different customers in our sample as random effects since each person differs. Thus, our model needs to be a generalized linear mixed model.  
+A generalized linear mixed model was created.  As our response variable only contains observations of "True" or "False", it is of the binomial family. Thus our generalized linear model uses a logit link function, and the model tells us about the relationship between our predictor variables and the response. We have a random effect we need to account for, which is the postal code, as purchasing patterns for people in the same postal code may be similar depending on if the area is lower or higher income. Since we would like to make claims about the entire population of customers as opposed to just those in our sample, we must use the different customers in our sample as random effects since each person differs. Thus, our model needs to be a generalized linear mixed model.  
 
 
 With this in mind, our model will be of the following form:
@@ -364,15 +363,14 @@ beta 0 is intercept, when age is 0 and income is poor
 * _$\mu$ is the intercept of the model_
 * _$U_i$ are the random effects of each postal code/customer_
 
-Each of our units and customers are independent from each other and should have no effect on each others answers and values, satisfying the independence assumption. Additionally, our chosen link function is correct as "Affordable" is most clearly a binary variable with a Bernoulli distribution as it can only either be True or False, satisfying another assumption.  The residual errors look binomial, so we can assume that the variance is binomial. However, our random effect is not of the normal distribution. 
+Each of our units and customers are independent from each other and have no effect on each others answers and values, satisfying the independence assumption. Additionally, our chosen link function is correct as "Affordable" is most clearly a binary variable with a Bernoulli distribution satisfying the distribution assumption.  The residual errors look binomial, so we can assume that the variance is binomial. However, our random effect is not of the normal distribution. *add more assumptions*
 
-To determine which variables affect whether a customer buys affordable fitness trackers, different models will be tested against each other. The test used to compare models is a restricted maximum likelihood ratio test (REML), which estimates random effects based on the fixed effects. This REML test has been chosen since we are comparing models with the same random effect (postal codes), and the assumptions for normality and independence aren't held. The REML test will be run under the null hypothesis that the two models being compared fit our data equally as good as each other. A smaller p-value below 0.05 (our significance level) means there is evidence against the null hypothesis, meaning the simpler model does not explain the data as well as the more complex model, making the larger model better. 
+Our age variable was created by subtracting the date of birth of the individual from the date of analysis. Income class was created by getting the census data and postal code data, getting the mean income from the postcode, and then segmenting these values into three different groups.  Income class is a categorical variable that is based on the average median household income of all individuals in the same postcode. This gives us an idea of the financial situation of a customer based on where they live. 
 
-Our age variable was created by subtracting the date of birth of the individual from the date of analysis. Income class was created by getting the census data and postal code data, getting the mean income from the postcode, and then segmenting these values into three different groups.  Income class is a categorical variable that can be either lower, middle, or upper class based on the average median household income of all individuals in the same postcode. This gives us an idea of the financial situation of a customer, and how wealthy they are based on where they live. 
+To determine which variables affect whether a customer buys affordable fitness trackers, different models were tested against each other. The test used to compare models is a restricted maximum likelihood ratio test (REML), which estimates random effects based on the fixed effects. This REML test has been chosen since we are comparing models with the same random effect (postal codes), and the assumptions for normality and independence aren't held. The REML test will be run under the null hypothesis that the two models being compared fit our data equally as good as each other. A smaller p-value below 0.05 (our significance level) means there is evidence against the null hypothesis. 
 
-The coefficients of our variable are exponentiated into the odds ratio, to be interpretable. Additionally,the 95% confidence intervals for each coefficient will be created and also exponentiated, where the upper and lower bound of the interval will be obtained. The reason we create these intervals is to give us a range of plausible coefficient values as opposed to just the single estimate we originally had. We can also compare our single estimates to the intervals to see how reasonable the values we obtained for the coefficients actually were.
+The coefficients of our variable are exponentiated into the odds ratio, to be interpretable. Additionally,the 95% confidence intervals for each coefficient will be created and also exponentiated, where the upper and lower bound of the interval will be obtained. The reason we create these intervals is to give us a range of plausible coefficient values in addition to the singular estimate. 
 
-Our age variable was created by subtracting the date of birth of the individual from the date of analysis. Income class was created by getting the census data and postal code data, getting the mean income from the postcode, and then segmenting these values into three different groups.  Income class is a categorical variable that can be either lower, middle, or upper class based on the average median household income of all individuals in the same postcode. This gives us an idea of the financial situation of a customer, and how wealthy they are based on where they live.  
 
 ```{r, cache=TRUE, warning=FALSE, include = FALSE}
 market_model1 = glmer(affordable ~ factor(income_class) + (1 | postcode),
@@ -389,18 +387,22 @@ lrtest(market_model2,market_model3)
 summary(market_model2)
 ```
 
-In the creation of the model, the first fixed effect added was income class. We added the age variable for the second model, and compared the two models. Testing the model gave a very low p-value  of $5.656*10^{-9}$. Thus there is evidence against the null hypothesis that the simpler model without age fits the data as well as the model with age, meaning age and income should be included in the model as it affects a customers fitness tracker purchasing decisions. Another model was created,adding the variable sex to the model. The model was tested against the simpler Income Class and Age model. The test outputted a p-value of 0.2059. Thus there is no evidence against the null hypothesis stating the simpler models without sex explain the data just as well as the data including sex. So in our final model, the fixed effects are income class and age, while the random effect is the postcode. 
+In the creation of the model, the first fixed effect added was income class. We added the age variable for the second model, and compared the two models. Testing the model gave a very low p-value  of $5.656*10^{-9}$. Thus there is evidence against the null hypothesis that the simpler model without age fits the data as well as the model with age, meaning age and income should be included in the model. Another model was created,adding the sex variable to the model. The model was tested against the simpler Income Class and Age model. The test outputted a p-value of 0.2059. Thus there is no evidence against the null hypothesis stating the simpler models without sex explain the data just as well as the data including sex. So in our final model, the fixed effects are income class and age, while the random effect is the postcode. 
 
 ## Results 
 
-We perform a kruskal-wallis non-parametric test to check if the proportion of people buying new devices are is similar across income class. The null hypothesis is that the likelihood of buying the newer devices across the groups is the same. If this were true, then income does not have an effect on purchasing the devices. However as the p value is $2.2e^{-16}$, we reject the null hypothesis and determine that some groups are more likely to buy the devices than others. 
+We perform a kruskal-wallis non-parametric test to check if the proportion of people buying new devices are is similar across income class. The null hypothesis is that the likelihood of buying the newer devices across the groups is the same. As the p value is $2.2e^{-16}$, we reject the null hypothesis and determine that some groups are more likely to buy the newer devices than others. 
 
 ```{r,include=FALSE}
-# Are the proportions of people being flagged similar across race?
+# Are the proportions of people buying the newer affordable devices similar across income?
 
 kruskal.test(affordable ~ factor(income_class), data = marketing_data)
 ```
-Below, a table can be seen containing the exponentiated estimated coefficients and confidence intervals for each fixed effect, as well as the intercept values when all fixed effects are equal to zero. As our confidence intervals are narrow, our estimates are precise. 
+
+Below, is the results table, containing the estimated exponentiated coefficients and confidence intervals for each fixed effect, as well as the intercept.As our confidence intervals are narrow, our estimates are precise. 
+
+The intercept value is not meaningful as this means that the base age for purchasing a newer device would be at 0. The estimated coefficient of the fixed effect for middle class customers is 0.583. This tells us that customers of the middle income class are 41.7% less likely to buy the newer affordable devices compared to those in the lower income class, holding age constant. With an estimated coefficient of 0.43, upper class people are 57 % less likely to buy the newer devices, holding age constant. We thus see that a higher income class causes customers to buy less affordable products, holding age constant and taking into account the dependence of individuals living in the same postcode. The confidence intervals show that it is plausible that the decreased likelihood is within these ranges of values. 
+The  estimate for age  was 1.005,meaning that for each additional age,the likeliness of the customer buying the newer affordable devices increases by 0.5%, holding income class constant. This means that the older as customer is, the more likely that customer is to buy an affordable fitness tracker or smartwatch.
 
 ```{r, cache=TRUE,eval=FALSE}
 confint <- confint(market_model2)
@@ -419,11 +421,6 @@ colnames(market_table) <- c("Estimate", "95% Confidence Interval")
 kable(market_table, align = c("c", "c"))
 ```
 
-The intercept value is not meaningful as this means that the base age for purchasing a newer device would be at 0. 
-
-We see that the estimated coefficient of the fixed effect for middle class customers is 0.583, with a confidence interval of plausible values between 0.543 and 0.626. This tells us that customers of the middle income class are 41.7% less likely to buy the newer affordable devices compared to those in the lower income class, holding age constant. When looking at the estimated coefficient of the fixed effect for upper class customers, we see the same thing. With an estimated coefficient of 0.43, upper class people are 57 % less likely to buy the newer devices, holding age constant. We thus see that a higher income class causes customers to buy less affordable products. That is, as the income class of a customer increases, the chance that they purchase affordable products decreases, taking into account the dependence of individuals living in the same postcode.
-
-The  estimate for age  was 1.005, with a confidence interval of plausible values from 1.003 to 1.007. This means that for each additional age,the likeliness of the customer buying the newer affordable devices increases by 0.5%, holding income class constant.Since the odds increase as age increases, we are now aware that the older as customer is, the more likely that customer is to buy an affordable fitness tracker or smartwatch.
 
 
 The following plot helps visualize the previous results. We see that nearly 75% of lower income people who owned a MINGAR device owned the newer affordable device. The proportion of middle income people that own the newer devices is only just above 50%, and for high income people is less than 50%. This shows that the richer a person is, the less likely that they own a newer device. 
@@ -437,7 +434,7 @@ ggplot(data = marketing_data, aes(x = factor(income_class), fill = affordable)) 
 ```
 
 
-This plot shows the estimated relationship between the log mean value of the decision to buy the newer affordable products, and the age of the person. The plot also shows the confidence intervals around the line, as well as segments by income class. The log of the y axis is taken due to the bernoulli nature of the response. Due to the positive slope, we see that the older one is, the more likely they are to purchase the new affordable devices. We also see that the slope for the lower class customers is higher than those of the middle class and upper class customers. Thus there is a positive relationship between age and the decision to buy newer products, and poorer customers are more likely to purchase newer products. 
+This plot shows the estimated relationship between the log mean value of the decision to buy the newer affordable products, and the age of the person. The plot also shows the confidence intervals around the line, segmented by income class. The log of the y axis is taken due to the bernoulli nature of the response. Due to the positive slope, we see that the older one is, the more likely they are to purchase the new affordable devices. We also see that the regression line for the lower class customers is higher than those of the middle class and upper class customers. Thus there is a positive relationship between age and the decision to buy newer products, and poorer customers are more likely to purchase the newer products. 
 
 ```{r,fig.height=3, echo=FALSE, fig.cap = "Mean value of the Purchase decision by Age, grouped by Income Class" }
 emplogit2 <- marketing_data %>%
@@ -457,42 +454,35 @@ ggplot(emplogit2, aes(x = age, y = emplogit, color = income_class)) +
 
 ## Discussion
 
-
 ### Findings
 
-For the characteristics of new customers,it is confirmed that a customers age and income class play a large factor in how customers purchasing decisions differ. The higher the income the neighborhood of a customer is, the less likely that they purchase the newer products. We found that middle class and upper class income customers are respectively 41.7% less likely and 57% less likely to buy the newer devices compared to lower class customers. It was determined that the chances of buying an affordable product increases as a customer becomes older in age. As a person's age increases by 1, they are 0.5% more likely to purchase the newer devices compared to their old age. So, overall, customers buying affordable devices differ from those buying non-affordable ones as they likely are older of age and living in a lower income class neighborhood, relative to the other customers.
+For the characteristics of new customers,it is confirmed that a customer's age and income class play a large factor in how their purchasing decisions differ. The higher the income of the customer's neighborhood, the less likely that they purchase the newer products. We found that middle class and upper class income customers are respectively 41.7% less likely and 57% less likely to buy the newer devices compared to lower class customers. It was also determined that the chances of buying an affordable product increases as a customer becomes older in age. As a person's age increases by 1, they are 0.5% more likely to purchase the newer devices compared to their previous age. So, overall, customers buying affordable devices differ from those buying non-affordable ones as they likely are older of age and living in a lower income class neighborhood.
 
-For the relationship between sleep scores and skin tone, we have confirmed that MINGAR devices are far more likely to flag an individual the darker their skin is, provided that age stays constant.
-We find that the average number of flags during sleep for medium-light, medium, medium-dark, and dark skinned people are 2.173, 3.248, 6.624, and 10.913 times higher than the mean number of flags for light skinned people respectively. The sleep scores decline exponentially as the skin tone gets darker. This accounts for the duration of sleep, and age staying constant. We have also found that the age of the individual affects the mean number of flags they get, with the mean number of flags increasing by a factor of 0.999 (or decreases by 0.06%) for each additional age, skin tone held constant. *interpret this correctly now that ive scaled age!*
+For the relationship between sleep scores and skin tone, we have confirmed that MINGAR devices flag darker skinned people more often than lighter skinned people, holding  age constant. We find that the average number of flags during sleep for medium-light, medium, medium-dark, and dark skinned people are 2.173, 3.248, 6.624, and 10.913 times higher than the average number of flags for light skinned people respectively. The sleep scores decline exponentially as the skin tone gets darker. This accounts for the duration of sleep, and the dependency of sleep scores for the same individual. We have also found that the age of the individual affects the average  number of flags they get, with a one standard deviation increase in age being associated with a 4.9% decrease in the mean number of flags, skin tone held constant. 
 
 ### Strengths and limitations
 
 The major strengths of the customer characteristics model and analysis is the versatility and information this model provides on consumer behavior and consumption. Mainly, we know that lower income families have much greater odds to purchase more affordable smart watches than middle class and upper class families, and that older people will have higher odds to buy affordable smart watches. So, the marketing team of Mingar can shift their focus and advertising more to that market in regards to the affordable lines of 'active' and 'advance.' 
 
-The strengths of the skin tone model include the fact that we used a random effect of the individual to account for that fact that observations were likely not independent for each individual. This helps us to generalize our results for the population, and not just this specific sample. We also decided to add an offset of duration, which accounts for the fact that rates of flags for each night could be different. This helps show the true relationship between skin tone and quality flags. Another strength includes the rationale for the model, which used the poisson distribution and not the normal distribution, to match with the response. A final strength is only including biological characteristics for the customers, as the sleep trackers work off of biological qualities such as skin tone. 
+The strengths of the skin tone model include the fact that we used a random effect of the individual to account for that fact that observations were likely not independent for each individual. This helps us to generalize our results for the population, and not just this specific sample. We also decided to add an offset of duration, which accounts for the fact that rates of flags for each night could be different. Another strength includes the rationale for the model, which used the poisson distribution and not the normal distribution, to match with the response. A final strength is only including biological characteristics for the customers, as the sleep trackers work off of biological qualities such as skin tone. 
 
+A limitation of this analysis is that we dropped all the cases where a person's sex or pronouns were not included. This reduced our sample, which could possible introduce some bias to our model if the missing values were not randomly distributed. In future work we could try to collect better data on this variable.  
 
-A limitation of this analysis is that we used only observations that were complete in all variables of interest. Specifically, we dropped all the cases where they did not respond in when questioned on their sex or pronouns. These changes reduced our sample, which could possible introduce some bias to our model. If the missing values were not randomly distributed, this could also lead to bias. In future work we could try to collect better data on this variable.  
+Another limitation of our model is from how we defined some of our variables used in the model. We defined income classes based of the percentiles within the data rather than following a standard, like the Canadian Tax bracket, because the ranges of these classifications tend to make all observations heavily lean towards only one factor of the bracket. Many of these brackets cite that `$`50 000 to `$`100 000 as one factor, but that range contains over 98% of the observations.
 
-Another limitation our model suffers from is from how we defined some of our variables used in the model. For example, we defined income classes based of the percentiles within the data rather than following a standard, like the Canadian Tax bracket, because the ranges of these classifications tend to make all observations heavily lean towards only one factor of the bracket. Many of these brackets cite that `$`50 000 to `$`100 000 as one factor, but that range contains over 98% of the observations.
-
-Another limitation is when it comes to defining the household median income. Most postcodes corresponded with multiple 'CSDuid' which meant that a single postcode also responds to many different median household incomes. To account for this, we took the average of all the median household incomes for when 'CSDuid' corresponded with the same postcode to create a new median household income for each postcode. All of these definitions may contribute inaccuracy to our data which could then affect the validity of the model. 
+Another limitation was from defining the household median income. Most postcodes corresponded with multiple 'CSDuid' which meant that a single postcode also responds to many different median household incomes. To account for this, we took the average of all the median household incomes for when 'CSDuid' corresponded with the same postcode to create a new median household income for each postcode. All of these definitions may contribute inaccuracy to our data which could then affect the validity of the model. 
 
 Another limitation is that we assumed those who lived in lower income neighbourhoods were lower income and those that lived in higher income neighbourhoods are higher income, but this is not always the case. This inaccuracy could lead to bias in the model.
 
-Also, an assumption for the general linear mixed model is that the random effect follows the normal distribution, but since there is only one of each postal code in our dataset, the random effects will instead be uniform. Thus the assumption is broken, which means the model results may be inaccurate. In future work we could use a gam model, which accounts for this problem. 
+An assumption for the general linear mixed model is that the random effect follows the normal distribution, but since there is only one of each postal code in our dataset, the random effects will instead be uniform. Thus the assumption is broken, which means the model results may be inaccurate. In future work we could use a gam model, which accounts for this problem. 
 
-
-There were several limitations when analyzing the information on skin tones and sleep scores. 
-The first major limitation is that the missing values (default skin tone emoji) was not accurate to the actual skin tone of the individual. As their true skin tone was not recorded, these individuals were dropped from the model, and analysis created is most likely biased as we dropped a large number of the observations. This means that  we do not know the true relationship between skin tones and sleep scores.
+The first major limitation for the sleep scores model is that the missing values (default skin tone emoji) was not accurate to the actual skin tone of the individual. As their true skin tone was not recorded, these individuals were dropped from the model, and analysis created is most likely biased as we dropped a large number of the observations. 
 
 Another limitation is that while the mean and median flags for each skin tone was close, they were not very close. This may violate the poisson assumption  that mean most always be equal to variance. This means that there is overdispersion of coefficients (coefficients reported are larger than their true variable). In future work we can use the form of the generalized poisson model that accounts for over dispersion. 
 
 We also dropped all observations in which sex was missing. This could cause bias in the model if the missing variables were not randomly distributed. In future work we could collect better data on this variable.  
 
 A main assumption for the type of model used is that the random effects need to come from a normal distribution. However as our random effects was the customer id, which is unique to each customer, the distribution is uniform. Thus our estimates are likely biased. 
-
-While the model is assumed correct, the residual plot had some downwards patterns. This may indicate that the model may not be correct due to th irregular residuals. Further investigation may be needed to find the best model to use. 
 
 \newpage
 
