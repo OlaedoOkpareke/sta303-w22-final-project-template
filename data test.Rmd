@@ -174,16 +174,17 @@ socialmedia_data = socialmedia_data %>%
   )) %>%
   select(-pronouns,-dev_id, -line_2,-released_2)
 
-socialmedia_data$emoji_modifier = fct_relevel(socialmedia_data$emoji_modifier, "Light Skin","Medium-Light Skin","Medium Skin","Medium-Dark Skin","Dark Skin")
-
 # creating datasets
 write_csv(marketing_data, "data/marketing_data")
 write_csv(socialmedia_data, "data/socialmedia_data")
+
 ```
 
 ```{r}
-levels(socialmedia_data$emoji_modifier)
+s = read_csv("data/socialmedia_data",col_types = col(emoji_modifier, as.factor=TRUE))
+glimpse(socialmedia_data)
 ```
+
 
 # Possible sleep score models
 ```{r}
